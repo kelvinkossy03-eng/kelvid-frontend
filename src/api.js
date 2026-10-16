@@ -14,9 +14,14 @@ export function resolveUrl(url) {
 }
 
 export async function apiFetch(path, opts = {}) {
-  const res = await fetch(apiUrl(path), opts)
+  const headers = { ...(opts.headers || {}) }
+  if (opts.body && !(opts.body instanceof FormData)) {
+    headers['Content-Type'] = headers['Content-Type'] || 'application/json'
+  }
+  const res = await fetch(apiUrl(path), { ...opts, headers })
   let data = null
-  try { data = await res.json() } catch { /* non-json */ }
-  if (!res.ok) throw new Error((data && data.detail) || `Request failed (${res.status})`)
+  let bodyText = ''
+  try { data = await res.json() } catch { bodyText = await res.text().catch(() => '') }
+  if (!res.ok) throw new Error((data && data.detail) || bodyText || `Request failed (${res.status})`)
   return data
 }

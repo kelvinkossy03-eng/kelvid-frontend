@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+﻿import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { API_BASE, apiFetch, resolveUrl } from './api.js'
 
-// Global error handlers — log errors so we can diagnose blank-screen issues in production
+// Global error handlers â€” log errors so we can diagnose blank-screen issues in production
 window.onerror = (msg, url, line, col, err) => {
   console.error('Uncaught error:', msg, 'at', url, ':', line, ':', col, err)
   return false
@@ -17,7 +17,7 @@ class ErrorBoundary extends React.Component {
     return { hasError: true, error }
   }
   componentDidCatch(error, errorInfo) {
-    this.setState({ errorInfo })
+    this.setState({ hasError: true, errorInfo })
     console.error('ErrorBoundary caught:', error, errorInfo)
   }
   render() {
@@ -60,7 +60,10 @@ function usePollJob(onDone) {
       for (;;) {
         await new Promise((r) => setTimeout(r, 4000))
         let j
-        try { j = await apiFetch(`/api/jobs/${id}`) } catch { break }
+        try { j = await apiFetch(`/api/jobs/${id}`) } catch (err) {
+          toast(`Poll failed: ${err.message}`)
+          break
+        }
         onDone(j, Math.round((Date.now() - t0) / 1000))
         if (j.status === 'done' || j.status === 'failed') break
       }
@@ -82,7 +85,7 @@ export default function App() {
   const [guide, setGuide] = useState(7.5)
   const [seed, setSeed] = useState('')
   const [apiKey, setApiKey] = useState('')
-  const [health, setHealth] = useState('connecting…')
+  const [health, setHealth] = useState('connectingâ€¦')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [jobs, setJobs] = useState([])
@@ -102,22 +105,27 @@ export default function App() {
     try {
       const d = await apiFetch('/api/jobs')
       setJobs(d.jobs || [])
-    } catch { /* offline */ }
-  }, [])
+    } catch (err) {
+      toast(err.message || 'Failed to load jobs')
+    }
+  }, [toast])
 
   const refreshGallery = useCallback(async () => {
     try {
       const d = await apiFetch('/api/gallery')
       setGallery((d.items || []).map((x) => ({ ...x, url: resolveUrl(x.url) })))
-    } catch { /* offline */ }
-  }, [])
+    } catch (err) {
+      toast(err.message || 'Failed to load gallery')
+    }
+  }, [toast])
   const handleJob = useCallback((j, elapsed) => {
+    if (!j) return
     const url = resolveUrl(j.url)
-    setVideoMeta(`Job ${j.job_id.slice(0, 6)} · ${j.status} · ${elapsed}s`)
+    setVideoMeta(`Job ${j.job_id.slice(0, 6)} Â· ${j.status} Â· ${elapsed}s`)
     refreshJobs()
     if (j.status === 'done') {
       setVideoUrl(url)
-      setVideoMeta(`Done in ${elapsed}s · ${j.model}`)
+      setVideoMeta(`Done in ${elapsed}s Â· ${j.model}`)
       toast('Video ready!')
       refreshGallery()
     }
@@ -128,19 +136,22 @@ export default function App() {
 
   useEffect(() => {
     apiFetch('/api/health').then((d) => {
-      setHealth(d.token_configured ? `online v${d.version} · ${d.active_jobs} active` : 'online · NO HF TOKEN')
+      if (!d) return
+      setHealth(d.token_configured ? `online v${d.version} Â· ${d.active_jobs} active` : 'online Â· NO HF TOKEN')
     }).catch(() => setHealth(API_BASE ? `cannot reach ${API_BASE}` : 'offline'))
     apiFetch('/api/models').then((d) => {
+      if (!d) return
       setModels(d.models || [])
       if (d.default) setModel(d.default)
       if (d.provider) setProvider(d.provider)
-    }).catch(() => {})
-    void refreshJobs().catch(() => {})
-    void refreshGallery().catch(() => {})
+    }).catch(() => toast('Failed to load models'))
+    void refreshJobs().catch(() => toast('Failed to load jobs'))
+    void refreshGallery().catch(() => toast('Failed to load gallery'))
     const h = setInterval(() => {
       apiFetch('/api/health').then((d) => {
-        setHealth(d.token_configured ? `online v${d.version} · ${d.active_jobs} active` : 'online · NO HF TOKEN')
-      }).catch(() => {})
+        if (!d) return
+        setHealth(d.token_configured ? `online v${d.version} Â· ${d.active_jobs} active` : 'online Â· NO HF TOKEN')
+      }).catch(() => setHealth('cannot reach backend'))
     }, 15000)
     return () => clearInterval(h)
   }, [])
@@ -151,38 +162,61 @@ export default function App() {
     setBusy(true)
     setError('')
     try {
-      const body = { prompt, model, frames, steps, guidance: guide }
-      if (negativePrompt) body.negative_prompt = negativePrompt
+      const body = {
+        prompt,
+        model,
+        provider,
+        negative_prompt: negativePrompt || undefined,
+        num_frames: frames,
+        num_inference_steps: steps,
+        guidance_scale: guide,
+      }
       if (seed) body.seed = parseInt(seed, 10)
-      if (apiKey) body.api_key = apiKey
+      const headers = { 'Content-Type': 'application/json' }
+      if (apiKey) headers['X-API-Key'] = apiKey
       const d = await apiFetch('/api/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(body),
       })
       if (d.job_id) {
         poll(d.job_id)
-        setVideoMeta(`Queued · ${d.job_id.slice(0, 6)}`)
+        setVideoMeta(`Queued Â· ${d.job_id.slice(0, 6)}`)
       }
+      setBusy(false)
     } catch (err) {
-      setError(err.message || 'Generation failed')
+      const msg = err.message || 'Generation failed'
+      setError(msg)
+      toast(msg)
       setBusy(false)
     }
-  }, [prompt, negativePrompt, model, frames, steps, guide, seed, apiKey, poll])
+  }, [prompt, negativePrompt, model, frames, steps, guide, seed, apiKey, poll, toast])
   const retryJob = useCallback(async (id) => {
     try {
-      const d = await apiFetch(`/api/jobs/${id}/retry`, { method: 'POST' })
+      const headers = {}
+      if (apiKey) headers['X-API-Key'] = apiKey
+      const d = await apiFetch(`/api/jobs/${id}/retry`, { method: 'POST', headers })
       if (d.job_id) poll(d.job_id)
-    } catch { /* ignore */ }
-  }, [poll])
+    } catch (err) {
+      const msg = err.message || 'Retry failed'
+      setError(msg)
+      toast(msg)
+    }
+  }, [poll, apiKey, toast])
 
   const removeItem = useCallback(async (filename) => {
     try {
-      await apiFetch(`/api/gallery/${filename}`, { method: 'DELETE' })
+      const headers = {}
+      if (apiKey) headers['X-API-Key'] = apiKey
+      await apiFetch(`/api/gallery/${filename}`, { method: 'DELETE', headers })
       refreshGallery()
       toast('Deleted')
-    } catch { /* ignore */ }
-  }, [refreshGallery, toast])
+    } catch (err) {
+      const msg = err.message || 'Delete failed'
+      setError(msg)
+      toast(msg)
+    }
+  }, [refreshGallery, toast, apiKey])
 
   const shown = gallery.filter((x) => {
     const q = filter.toLowerCase()
@@ -212,26 +246,35 @@ export default function App() {
           <form onSubmit={submit} className="gen-form">
             <div className="field-group">
               <div className="field-label">
-                <span>Prompt</span>
+                <label htmlFor="prompt">Prompt</label>
                 <span className="field-count">{prompt.length}</span>
               </div>
               <textarea
+                id="prompt"
+                name="prompt"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Describe the video you want to create…"
+                placeholder="Describe the video you want to createâ€¦"
                 rows={4}
               />
             </div>
 
             <div className="field-group">
               <div className="field-label">
-                <span>Model</span>
+                <label htmlFor="model">Model</label>
               </div>
-              <select value={model} onChange={(e) => setModel(e.target.value)}>
+              <select
+                id="model"
+                name="model"
+                value={model}
+                onChange={(e) => setModel(e.target.value)}>
                 <option value="">Auto-select</option>
-                {models.map((m) => (
-                  <option key={m} value={m}>{m.split('/').pop()}</option>
-                ))}
+                {models.map((m) => {
+                  const modelId = typeof m === 'string' ? m : (m.id || m.model || '')
+                  return (
+                    <option key={modelId} value={modelId}>{modelId.split('/').pop()}</option>
+                  )
+                })}
               </select>
             </div>
 
@@ -247,50 +290,87 @@ export default function App() {
                     className={`chip ${prompt === idea ? 'active' : ''}`}
                     onClick={() => setPrompt(idea)}
                   >
-                    {idea.slice(0, 30)}…
+                    {idea.slice(0, 30)}â€¦
                   </button>
                 ))}
               </div>
             </div>
 
             <details className="glass">
-              <summary>⚙️ Advanced settings</summary>
+              <summary>âš™ï¸ Advanced settings</summary>
               <div className="accordion-body row-2">
                 <div>
-                  <label>Frames</label>
-                  <input type="range" min={8} max={150} value={frames} onChange={(e) => setFrames(+e.target.value)} />
+                  <label htmlFor="frames">Frames</label>
+                  <input
+                    id="frames"
+                    name="frames"
+                    type="range"
+                    min={8}
+                    max={150}
+                    value={frames}
+                    onChange={(e) => setFrames(+e.target.value)}
+                  />
                   <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{frames} frames</span>
                 </div>
                 <div>
-                  <label>Steps ({steps})</label>
-                  <input type="range" min={5} max={60} value={steps} onChange={(e) => setSteps(+e.target.value)} />
+                  <label htmlFor="steps">Steps ({steps})</label>
+                  <input
+                    id="steps"
+                    name="steps"
+                    type="range"
+                    min={5}
+                    max={60}
+                    value={steps}
+                    onChange={(e) => setSteps(+e.target.value)}
+                  />
                 </div>
                 <div>
-                  <label>Guidance ({guide})</label>
-                  <input type="range" min={1} max={20} step={0.5} value={guide} onChange={(e) => setGuide(+e.target.value)} />
+                  <label htmlFor="guidance">Guidance ({guide})</label>
+                  <input
+                    id="guidance"
+                    name="guidance"
+                    type="range"
+                    min={1}
+                    max={20}
+                    step={0.5}
+                    value={guide}
+                    onChange={(e) => setGuide(+e.target.value)}
+                  />
                 </div>
                 <div>
-                  <label>Seed</label>
-                  <input value={seed} onChange={(e) => setSeed(e.target.value)} placeholder="blank = random" />
+                  <label htmlFor="seed">Seed</label>
+                  <input
+                    id="seed"
+                    name="seed"
+                    value={seed}
+                    onChange={(e) => setSeed(e.target.value)}
+                    placeholder="blank = random"
+                  />
                 </div>
               </div>
             </details>
 
             <details className="glass">
-              <summary>🔑 API key (if server requires)</summary>
+              <summary>ðŸ”‘ API key (if server requires)</summary>
               <div className="accordion-body">
-                <label>X-API-Key</label>
-                <input value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="paste server key…" />
+                <label htmlFor="apiKey">X-API-Key</label>
+                <input
+                  id="apiKey"
+                  name="apiKey"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="paste server keyâ€¦"
+                />
               </div>
             </details>
 
             <button className="btn btn-primary btn-generate" type="submit" disabled={busy}>
-              {busy ? 'Queuing…' : '✨ Generate video'}
+              {busy ? 'Queuingâ€¦' : 'âœ¨ Generate video'}
             </button>
 
             {error && <div className="err-msg">{error}</div>}
 
-            <label>Live queue</label>
+            <div className="live-queue-label">Live queue</div>
             <div className="jobs-list">
               {jobs.length === 0 && <div className="job-row"><small>No jobs yet</small></div>}
               {jobs.slice(0, 10).map((j) => (
@@ -319,12 +399,12 @@ export default function App() {
                 <div className="card-sub">{videoMeta || 'Your video will appear here.'}</div>
               </div>
               {videoUrl && (
-                <a className="btn-ghost" href={videoUrl} download style={{ textDecoration: 'none' }}>⬇ Download</a>
+                <a className="btn-ghost" href={videoUrl} download style={{ textDecoration: 'none' }}>â¬‡ Download</a>
               )}
             </div>
             {!videoUrl && (
               <div className="preview-empty">
-                <span className="big">🎬</span>
+                <span className="big">ðŸŽ¬</span>
                 <p>Generate your first video to see it here.</p>
               </div>
             )}
@@ -346,27 +426,27 @@ export default function App() {
                   className="gallery-search"
                   value={filter}
                   onChange={(e) => setFilter(e.target.value)}
-                  placeholder="Search prompts…"
+                  placeholder="Search promptsâ€¦"
                 />
-                <button type="button" className="btn-ghost" onClick={() => { refreshGallery(); refreshJobs() }}>↻</button>
+                <button type="button" className="btn-ghost" onClick={() => { refreshGallery(); refreshJobs() }}>â†»</button>
               </div>
             </div>
             <div className="gallery-grid">
               {shown.map((x) => (
                 <div className="gallery-item" key={x.filename} onClick={() => { setVideoUrl(x.url); setVideoMeta(x.prompt) }}>
                   <video src={x.url} muted preload="metadata" />
-                  <button className="gallery-delete" title="Delete" onClick={(e) => { e.stopPropagation(); removeItem(x.filename) }}>✕</button>
+                  <button className="gallery-delete" title="Delete" onClick={(e) => { e.stopPropagation(); removeItem(x.filename) }}>âœ•</button>
                   <div className="gallery-info">
                     <div className="gallery-prompt">{x.prompt ? x.prompt.slice(0, 80) : ''}</div>
                     <div className="gallery-meta">
-                      {(x.model || '').split('/').pop()} · {(x.created_at || '').slice(0, 10)}
+                      {(typeof x.model === 'string' ? x.model : (x.model && x.model.id) || '').split('/').pop()} Â· {(x.created_at || '').slice(0, 10)}
                     </div>
                   </div>
                 </div>
               ))}
               {shown.length === 0 && (
                 <div className="gallery-empty">
-                  <span className="big">📭</span>
+                  <span className="big">ðŸ“­</span>
                   <p>No videos yet. Generate your first one!</p>
                 </div>
               )}
@@ -382,9 +462,16 @@ export default function App() {
       </div>
 
       <footer>
-        Kelvid · React + FastAPI + Hugging Face · API: {API_BASE || 'same-origin'}
+        Kelvid Â· React + FastAPI + Hugging Face Â· API: {API_BASE || 'same-origin'}
       </footer>
       </div>
     </ErrorBoundary>
   )
 }
+
+
+
+
+
+
+
