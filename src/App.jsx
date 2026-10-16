@@ -164,13 +164,13 @@ export default function App() {
     try {
       const body = {
         prompt,
-        model,
         provider,
         negative_prompt: negativePrompt || undefined,
         num_frames: frames,
         num_inference_steps: steps,
         guidance_scale: guide,
       }
+      if (model) body.model = model
       if (seed) body.seed = parseInt(seed, 10)
       const headers = { 'Content-Type': 'application/json' }
       if (apiKey) headers['X-API-Key'] = apiKey
