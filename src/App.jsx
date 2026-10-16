@@ -78,12 +78,7 @@ export default function App() {
   const [prompt, setPrompt] = useState(IDEAS[0])
   const [negativePrompt, setNegativePrompt] = useState('')
   const [models, setModels] = useState([])
-  const [model, setModel] = useState('')
-  const [provider, setProvider] = useState('fal-ai')
-  const [frames, setFrames] = useState(48)
-  const [steps, setSteps] = useState(30)
-  const [guide, setGuide] = useState(7.5)
-  const [seed, setSeed] = useState('')
+
   const [apiKey, setApiKey] = useState('')
   const [health, setHealth] = useState('connecting…')
   const [busy, setBusy] = useState(false)
@@ -142,8 +137,8 @@ export default function App() {
     apiFetch('/api/models').then((d) => {
       if (!d) return
       setModels(d.models || [])
-      if (d.default) setModel(d.default)
-      if (d.provider) setProvider(d.provider)
+      if (d.default) setSelectedModel(d.default)
+      if (d.provider) setSelectedProvider(d.provider)
     }).catch(() => toast('Failed to load models'))
     void refreshJobs().catch(() => toast('Failed to load jobs'))
     void refreshGallery().catch(() => toast('Failed to load gallery'))
@@ -156,21 +151,28 @@ export default function App() {
     return () => clearInterval(h)
   }, [])
 
+  const [showSettings, setShowSettings] = useState(false)
+  const [selectedModel, setSelectedModel] = useState('')
+  const [selectedProvider, setSelectedProvider] = useState('')
+  const [frames, setFrames] = useState(48)
+  const [steps, setSteps] = useState(30)
+  const [guide, setGuide] = useState(7.5)
+  const [seed, setSeed] = useState('')
+
   const submit = useCallback(async (e) => {
     e.preventDefault()
     if (!prompt.trim()) return
-    setBusy(true)
     setError('')
     try {
       const body = {
         prompt,
-        provider,
         negative_prompt: negativePrompt || undefined,
         num_frames: frames,
         num_inference_steps: steps,
         guidance_scale: guide,
       }
-      if (model) body.model = model
+      if (selectedModel) body.model = selectedModel
+      if (selectedProvider) body.provider = selectedProvider
       if (seed) body.seed = parseInt(seed, 10)
       const headers = { 'Content-Type': 'application/json' }
       if (apiKey) headers['X-API-Key'] = apiKey
@@ -190,7 +192,7 @@ export default function App() {
       toast(msg)
       setBusy(false)
     }
-  }, [prompt, negativePrompt, model, frames, steps, guide, seed, apiKey, poll, toast])
+  }, [prompt, negativePrompt, selectedModel, selectedProvider, frames, steps, guide, seed, apiKey, poll, toast])
   const retryJob = useCallback(async (id) => {
     try {
       const headers = {}
@@ -263,19 +265,34 @@ export default function App() {
               <div className="field-label">
                 <label htmlFor="model">Model</label>
               </div>
-              <select
-                id="model"
-                name="model"
-                value={model}
-                onChange={(e) => setModel(e.target.value)}>
-                <option value="">Auto-select</option>
+              <div className="model-cards">
+                {models.length === 0 && <span className="muted">Loading models&hellip;</span>}
                 {models.map((m) => {
                   const modelId = typeof m === 'string' ? m : (m.id || m.model || '')
+                  const modelLabel = typeof m === 'string' ? m : (m.label || m.id || modelId)
+                  const modelProvider = typeof m === 'string' ? 'fal-ai' : (m.provider || '')
+                  const isSelected = selectedModel === modelId && selectedProvider === modelProvider
                   return (
-                    <option key={modelId} value={modelId}>{modelId.split('/').pop()}</option>
+                    <label
+                      key={modelId}
+                      className={`model-card ${isSelected ? 'active' : ''}`}
+                    >
+                      <input
+                        type="radio"
+                        name="model"
+                        value={JSON.stringify({ id: modelId, provider: modelProvider })}
+                        checked={isSelected}
+                        onChange={() => {
+                          setSelectedModel(modelId)
+                          setSelectedProvider(modelProvider)
+                        }}
+                      />
+                      <span>{modelLabel.split('/').pop()}</span>
+                      <span className="model-provider">{modelProvider}</span>
+                    </label>
                   )
                 })}
-              </select>
+              </div>
             </div>
 
             <div className="field-group">
@@ -306,12 +323,12 @@ export default function App() {
                     name="frames"
                     type="range"
                     min={8}
-                    max={150}
+                    max={240}
                     value={frames}
                     onChange={(e) => setFrames(+e.target.value)}
                   />
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{frames} frames</span>
-                </div>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{frames} frames · {Math.round(frames / 24)}s</span>
+                              </div>
                 <div>
                   <label htmlFor="steps">Steps ({steps})</label>
                   <input
@@ -319,7 +336,7 @@ export default function App() {
                     name="steps"
                     type="range"
                     min={5}
-                    max={60}
+                    max={80}
                     value={steps}
                     onChange={(e) => setSteps(+e.target.value)}
                   />
