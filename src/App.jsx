@@ -1,7 +1,7 @@
 ﻿import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { API_BASE, apiFetch, resolveUrl } from './api.js'
 
-// Global error handlers â€” log errors so we can diagnose blank-screen issues in production
+// Global error handlers — log errors so we can diagnose blank-screen issues in production
 window.onerror = (msg, url, line, col, err) => {
   console.error('Uncaught error:', msg, 'at', url, ':', line, ':', col, err)
   return false
@@ -85,7 +85,7 @@ export default function App() {
   const [guide, setGuide] = useState(7.5)
   const [seed, setSeed] = useState('')
   const [apiKey, setApiKey] = useState('')
-  const [health, setHealth] = useState('connectingâ€¦')
+  const [health, setHealth] = useState('connecting…')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [jobs, setJobs] = useState([])
@@ -121,11 +121,11 @@ export default function App() {
   const handleJob = useCallback((j, elapsed) => {
     if (!j) return
     const url = resolveUrl(j.url)
-    setVideoMeta(`Job ${j.job_id.slice(0, 6)} Â· ${j.status} Â· ${elapsed}s`)
+    setVideoMeta(`Job ${j.job_id.slice(0, 6)} · ${j.status} · ${elapsed}s`)
     refreshJobs()
     if (j.status === 'done') {
       setVideoUrl(url)
-      setVideoMeta(`Done in ${elapsed}s Â· ${j.model}`)
+      setVideoMeta(`Done in ${elapsed}s · ${j.model}`)
       toast('Video ready!')
       refreshGallery()
     }
@@ -137,7 +137,7 @@ export default function App() {
   useEffect(() => {
     apiFetch('/api/health').then((d) => {
       if (!d) return
-      setHealth(d.token_configured ? `online v${d.version} Â· ${d.active_jobs} active` : 'online Â· NO HF TOKEN')
+      setHealth(d.token_configured ? `online v${d.version} · ${d.active_jobs} active` : 'online · NO HF TOKEN')
     }).catch(() => setHealth(API_BASE ? `cannot reach ${API_BASE}` : 'offline'))
     apiFetch('/api/models').then((d) => {
       if (!d) return
@@ -150,7 +150,7 @@ export default function App() {
     const h = setInterval(() => {
       apiFetch('/api/health').then((d) => {
         if (!d) return
-        setHealth(d.token_configured ? `online v${d.version} Â· ${d.active_jobs} active` : 'online Â· NO HF TOKEN')
+        setHealth(d.token_configured ? `online v${d.version} · ${d.active_jobs} active` : 'online · NO HF TOKEN')
       }).catch(() => setHealth('cannot reach backend'))
     }, 15000)
     return () => clearInterval(h)
@@ -181,7 +181,7 @@ export default function App() {
       })
       if (d.job_id) {
         poll(d.job_id)
-        setVideoMeta(`Queued Â· ${d.job_id.slice(0, 6)}`)
+        setVideoMeta(`Queued · ${d.job_id.slice(0, 6)}`)
       }
       setBusy(false)
     } catch (err) {
@@ -254,7 +254,7 @@ export default function App() {
                 name="prompt"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Describe the video you want to createâ€¦"
+                placeholder="Describe the video you want to create…"
                 rows={4}
               />
             </div>
@@ -290,7 +290,7 @@ export default function App() {
                     className={`chip ${prompt === idea ? 'active' : ''}`}
                     onClick={() => setPrompt(idea)}
                   >
-                    {idea.slice(0, 30)}â€¦
+                    {idea.slice(0, 30)}…
                   </button>
                 ))}
               </div>
@@ -359,13 +359,13 @@ export default function App() {
                   name="apiKey"
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="paste server keyâ€¦"
+                  placeholder="paste server key…"
                 />
               </div>
             </details>
 
             <button className="btn btn-primary btn-generate" type="submit" disabled={busy}>
-              {busy ? 'Queuingâ€¦' : 'âœ¨ Generate video'}
+              {busy ? 'Queuing…' : 'âœ¨ Generate video'}
             </button>
 
             {error && <div className="err-msg">{error}</div>}
@@ -399,12 +399,12 @@ export default function App() {
                 <div className="card-sub">{videoMeta || 'Your video will appear here.'}</div>
               </div>
               {videoUrl && (
-                <a className="btn-ghost" href={videoUrl} download style={{ textDecoration: 'none' }}>â¬‡ Download</a>
+                <a className="btn-ghost" href={videoUrl} download style={{ textDecoration: 'none' }}>⬇️ Download</a>
               )}
             </div>
             {!videoUrl && (
               <div className="preview-empty">
-                <span className="big">ðŸŽ¬</span>
+                <span className="big">🎬</span>
                 <p>Generate your first video to see it here.</p>
               </div>
             )}
@@ -426,27 +426,27 @@ export default function App() {
                   className="gallery-search"
                   value={filter}
                   onChange={(e) => setFilter(e.target.value)}
-                  placeholder="Search promptsâ€¦"
+                  placeholder="Search prompts…"
                 />
-                <button type="button" className="btn-ghost" onClick={() => { refreshGallery(); refreshJobs() }}>â†»</button>
+                <button type="button" className="btn-ghost" onClick={() => { refreshGallery(); refreshJobs() }}>⇨️</button>
               </div>
             </div>
             <div className="gallery-grid">
               {shown.map((x) => (
                 <div className="gallery-item" key={x.filename} onClick={() => { setVideoUrl(x.url); setVideoMeta(x.prompt) }}>
                   <video src={x.url} muted preload="metadata" />
-                  <button className="gallery-delete" title="Delete" onClick={(e) => { e.stopPropagation(); removeItem(x.filename) }}>âœ•</button>
+                  <button className="gallery-delete" title="Delete" onClick={(e) => { e.stopPropagation(); removeItem(x.filename) }}>✖️</button>
                   <div className="gallery-info">
                     <div className="gallery-prompt">{x.prompt ? x.prompt.slice(0, 80) : ''}</div>
                     <div className="gallery-meta">
-                      {(typeof x.model === 'string' ? x.model : (x.model && x.model.id) || '').split('/').pop()} Â· {(x.created_at || '').slice(0, 10)}
+                      {(typeof x.model === 'string' ? x.model : (x.model && x.model.id) || '').split('/').pop()} · {(x.created_at || '').slice(0, 10)}
                     </div>
                   </div>
                 </div>
               ))}
               {shown.length === 0 && (
                 <div className="gallery-empty">
-                  <span className="big">ðŸ“­</span>
+                  <span className="big">📁</span>
                   <p>No videos yet. Generate your first one!</p>
                 </div>
               )}
@@ -462,7 +462,7 @@ export default function App() {
       </div>
 
       <footer>
-        Kelvid Â· React + FastAPI + Hugging Face Â· API: {API_BASE || 'same-origin'}
+        Kelvid · React + FastAPI + Hugging Face · API: {API_BASE || 'same-origin'}
       </footer>
       </div>
     </ErrorBoundary>
