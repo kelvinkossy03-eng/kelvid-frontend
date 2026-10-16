@@ -231,7 +231,7 @@ export default function App() {
       <div className="wrap">
       <nav className="nav">
         <div className="nav-inner">
-          <div className="logo">K</div>
+          <img className="logo-img" src="/logo.svg" alt="Kelvid Studio logo" width="36" height="36" />
           <div className="brand">
             <h1>Kelvid Studio</h1>
             <small>AI Video Generation</small>

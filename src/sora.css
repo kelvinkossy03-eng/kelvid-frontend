@@ -28,6 +28,8 @@ body {
   display: grid; place-items: center;
   font-weight: 900;
 }
+.logo { background: transparent; border: none; padding: 0; }
+.logo-img { width: 36px; height: 36px; border-radius: 12px; display: block; box-shadow: 0 10px 30px rgba(124, 58, 237, 0.35); }
 .brand h1 { font-size: 18px; letter-spacing: -0.02em; }
 .brand small { color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.12em; font-size: 10px; }
 .status-pill { background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 999px; }
