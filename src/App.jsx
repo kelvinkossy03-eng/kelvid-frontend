@@ -80,7 +80,7 @@ export default function App() {
   const [models, setModels] = useState([])
 
   const [apiKey, setApiKey] = useState('')
-  const [health, setHealth] = useState('connecting…')
+  const [health, setHealth] = useState('connecting...')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [jobs, setJobs] = useState([])
@@ -116,11 +116,11 @@ export default function App() {
   const handleJob = useCallback((j, elapsed) => {
     if (!j) return
     const url = resolveUrl(j.url)
-    setVideoMeta(`Job ${j.job_id.slice(0, 6)} · ${j.status} · ${elapsed}s`)
+    setVideoMeta(`Job ${j.job_id.slice(0, 6)} | ${j.status} | ${elapsed}s`)
     refreshJobs()
     if (j.status === 'done') {
       setVideoUrl(url)
-      setVideoMeta(`Done in ${elapsed}s · ${j.model}`)
+      setVideoMeta(`Done in ${elapsed}s | ${j.model}`)
       toast('Video ready!')
       refreshGallery()
     }
@@ -132,7 +132,7 @@ export default function App() {
   useEffect(() => {
     apiFetch('/api/health').then((d) => {
       if (!d) return
-      setHealth(d.token_configured ? `online v${d.version} · ${d.active_jobs} active` : 'online · NO HF TOKEN')
+      setHealth(d.token_configured ? `online v${d.version} | ${d.active_jobs} active` : 'online | NO HF TOKEN')
     }).catch(() => setHealth(API_BASE ? `cannot reach ${API_BASE}` : 'offline'))
     apiFetch('/api/models').then((d) => {
       if (!d) return
@@ -145,7 +145,7 @@ export default function App() {
     const h = setInterval(() => {
       apiFetch('/api/health').then((d) => {
         if (!d) return
-        setHealth(d.token_configured ? `online v${d.version} · ${d.active_jobs} active` : 'online · NO HF TOKEN')
+        setHealth(d.token_configured ? `online v${d.version} | ${d.active_jobs} active` : 'online | NO HF TOKEN')
       }).catch(() => setHealth('cannot reach backend'))
     }, 15000)
     return () => clearInterval(h)
@@ -162,6 +162,7 @@ export default function App() {
   const submit = useCallback(async (e) => {
     e.preventDefault()
     if (!prompt.trim()) return
+    setBusy(true)
     setError('')
     try {
       const body = {
@@ -183,7 +184,7 @@ export default function App() {
       })
       if (d.job_id) {
         poll(d.job_id)
-        setVideoMeta(`Queued · ${d.job_id.slice(0, 6)}`)
+        setVideoMeta(`Queued | ${d.job_id.slice(0, 6)}`)
       }
       setBusy(false)
     } catch (err) {
@@ -256,8 +257,19 @@ export default function App() {
                 name="prompt"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Describe the video you want to create…"
+                placeholder="Describe the video you want to create..."
                 rows={4}
+              />
+              <div className="field-label" style={{ marginTop: 10 }}>
+                <label htmlFor="negativePrompt">Negative prompt</label>
+              </div>
+              <textarea
+                id="negativePrompt"
+                name="negativePrompt"
+                value={negativePrompt}
+                onChange={(e) => setNegativePrompt(e.target.value)}
+                placeholder="What to avoid: blurry, watermark, distorted faces..."
+                rows={2}
               />
             </div>
 
@@ -266,7 +278,7 @@ export default function App() {
                 <label htmlFor="model">Model</label>
               </div>
               <div className="model-cards">
-                {models.length === 0 && <span className="muted">Loading models&hellip;</span>}
+                {models.length === 0 && <span className="muted">Loading models...</span>}
                 {models.map((m) => {
                   const modelId = typeof m === 'string' ? m : (m.id || m.model || '')
                   const modelLabel = typeof m === 'string' ? m : (m.label || m.id || modelId)
@@ -307,28 +319,40 @@ export default function App() {
                     className={`chip ${prompt === idea ? 'active' : ''}`}
                     onClick={() => setPrompt(idea)}
                   >
-                    {idea.slice(0, 30)}…
+                    {idea.slice(0, 30)}...
                   </button>
                 ))}
               </div>
             </div>
 
             <details className="glass">
-              <summary>âš™ï¸ Advanced settings</summary>
+              <summary>Advanced settings</summary>
               <div className="accordion-body row-2">
                 <div>
-                  <label htmlFor="frames">Frames</label>
+                  <label htmlFor="frames">Duration and frames</label>
+                  <div className="chips" style={{ marginBottom: 8 }}>
+                    {[96, 192, 384, 720, 1440].map((f) => (
+                      <button
+                        key={f}
+                        type="button"
+                        className={`chip ${frames === f ? 'active' : ''}`}
+                        onClick={() => setFrames(f)}
+                      >
+                        {Math.round(f / 24)}s
+                      </button>
+                    ))}
+                  </div>
                   <input
                     id="frames"
                     name="frames"
                     type="range"
                     min={8}
-                    max={240}
+                    max={1440}
                     value={frames}
                     onChange={(e) => setFrames(+e.target.value)}
                   />
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{frames} frames · {Math.round(frames / 24)}s</span>
-                              </div>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{frames} frames | {Math.round(frames / 24)}s (up to 60s)</span>
+                </div>
                 <div>
                   <label htmlFor="steps">Steps ({steps})</label>
                   <input
@@ -368,7 +392,7 @@ export default function App() {
             </details>
 
             <details className="glass">
-              <summary>ðŸ”‘ API key (if server requires)</summary>
+              <summary>API key (if server requires)</summary>
               <div className="accordion-body">
                 <label htmlFor="apiKey">X-API-Key</label>
                 <input
@@ -376,13 +400,13 @@ export default function App() {
                   name="apiKey"
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="paste server key…"
+                  placeholder="paste server key..."
                 />
               </div>
             </details>
 
             <button className="btn btn-primary btn-generate" type="submit" disabled={busy}>
-              {busy ? 'Queuing…' : 'âœ¨ Generate video'}
+              {busy ? 'Queuing...' : 'Generate video'}
             </button>
 
             {error && <div className="err-msg">{error}</div>}
@@ -443,7 +467,7 @@ export default function App() {
                   className="gallery-search"
                   value={filter}
                   onChange={(e) => setFilter(e.target.value)}
-                  placeholder="Search prompts…"
+                  placeholder="Search prompts..."
                 />
                 <button type="button" className="btn-ghost" onClick={() => { refreshGallery(); refreshJobs() }}>⇨️</button>
               </div>
@@ -456,7 +480,7 @@ export default function App() {
                   <div className="gallery-info">
                     <div className="gallery-prompt">{x.prompt ? x.prompt.slice(0, 80) : ''}</div>
                     <div className="gallery-meta">
-                      {(typeof x.model === 'string' ? x.model : (x.model && x.model.id) || '').split('/').pop()} · {(x.created_at || '').slice(0, 10)}
+                      {(typeof x.model === 'string' ? x.model : (x.model && x.model.id) || '').split('/').pop()} | {(x.created_at || '').slice(0, 10)}
                     </div>
                   </div>
                 </div>
@@ -479,7 +503,7 @@ export default function App() {
       </div>
 
       <footer>
-        Kelvid · React + FastAPI + Hugging Face · API: {API_BASE || 'same-origin'}
+        Kelvid | React + FastAPI + Hugging Face | API: {API_BASE || 'same-origin'}
       </footer>
       </div>
     </ErrorBoundary>
