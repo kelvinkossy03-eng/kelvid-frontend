@@ -1,0 +1,17 @@
+[debug] [2026-10-16T10:42:24.923Z] ----------------------------------------------------------------------
+[debug] [2026-10-16T10:42:24.934Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\user\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js login:ci
+[debug] [2026-10-16T10:42:24.935Z] CLI Version:   15.17.0
+[debug] [2026-10-16T10:42:24.935Z] Platform:      win32
+[debug] [2026-10-16T10:42:24.935Z] Node Version:  v24.22.0
+[debug] [2026-10-16T10:42:24.935Z] Time:          Fri Oct 16 2026 11:42:24 GMT+0100 (West Africa Time)
+[debug] [2026-10-16T10:42:24.936Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-10-16T10:42:25.440Z] Object "/hosting" in "firebase.json" has unknown property: {"additionalProperty":"project"}
+[debug] [2026-10-16T10:42:25.440Z] Field "/hosting" in "firebase.json" is possibly invalid: must be array
+[debug] [2026-10-16T10:42:25.440Z] Field "/hosting" in "firebase.json" is possibly invalid: must match a schema in anyOf
+[warn] !  Authenticating with a `login:ci` token is deprecated and will be removed in a future major version of `firebase-tools`. Instead, use a service account key with `GOOGLE_APPLICATION_CREDENTIALS`: https://cloud.google.com/docs/authentication/getting-started 
+[info] 
+[info] Visit this URL on this device to log in:
+[info] https://accounts.google.com/o/oauth2/auth?client_id=563584335869-fgrhgmd47bqnekij5i8b5pr03ho849e6.apps.googleusercontent.com&scope=email%20openid%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloudplatformprojects.readonly%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Ffirebase%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-platform&response_type=code&state=718316386&redirect_uri=http%3A%2F%2Flocalhost%3A9005
+[info] 
+[info] Waiting for authentication...

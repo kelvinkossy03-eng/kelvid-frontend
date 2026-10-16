@@ -1,5 +1,46 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { API_BASE, apiFetch, resolveUrl } from './api.js'
+
+// Global error handlers — log errors so we can diagnose blank-screen issues in production
+window.onerror = (msg, url, line, col, err) => {
+  console.error('Uncaught error:', msg, 'at', url, ':', line, ':', col, err)
+  return false
+}
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('Unhandled promise rejection:', event.reason)
+})
+
+// Simple ErrorBoundary so a render/effect crash shows a fallback UI instead of a blank screen
+class ErrorBoundary extends React.Component {
+  state = { hasError: false, error: null, errorInfo: null }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error }
+  }
+  componentDidCatch(error, errorInfo) {
+    this.setState({ errorInfo })
+    console.error('ErrorBoundary caught:', error, errorInfo)
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="wrap" style={{ padding: 40, textAlign: 'center', color: 'var(--text)' }}>
+          <h2>Something went wrong</h2>
+          <p>{this.state.error?.message || 'An unexpected error occurred'}</p>
+          <button
+            onClick={() => {
+              this.setState({ hasError: false, error: null, errorInfo: null })
+              window.location.reload()
+            }}
+            className="btn btn-primary"
+          >
+            Refresh page
+          </button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 const IDEAS = [
   'Cinematic drone shot over a neon city at night, rain, reflections',
@@ -94,8 +135,8 @@ export default function App() {
       if (d.default) setModel(d.default)
       if (d.provider) setProvider(d.provider)
     }).catch(() => {})
-    refreshJobs()
-    refreshGallery()
+    void refreshJobs().catch(() => {})
+    void refreshGallery().catch(() => {})
     const h = setInterval(() => {
       apiFetch('/api/health').then((d) => {
         setHealth(d.token_configured ? `online v${d.version} · ${d.active_jobs} active` : 'online · NO HF TOKEN')
@@ -149,7 +190,8 @@ export default function App() {
   })
 
   return (
-    <div className="wrap">
+    <ErrorBoundary>
+      <div className="wrap">
       <nav className="nav">
         <div className="nav-inner">
           <div className="logo">K</div>
@@ -342,6 +384,7 @@ export default function App() {
       <footer>
         Kelvid · React + FastAPI + Hugging Face · API: {API_BASE || 'same-origin'}
       </footer>
-    </div>
+      </div>
+    </ErrorBoundary>
   )
 }
