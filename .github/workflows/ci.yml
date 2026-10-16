@@ -31,8 +31,6 @@ jobs:
       - run: npm ci
       - run: npm run build
       - name: Deploy to Firebase Hosting
-        uses: firebase-tools/action@v4
-        with:
-          project: kelvid-frotend
-          token: ${{ secrets.FIREBASE_TOKEN }}
-        args: deploy --only hosting
+        run: |
+          npm install -g firebase-tools
+          firebase deploy --only hosting --token ${{ secrets.FIREBASE_TOKEN }}
