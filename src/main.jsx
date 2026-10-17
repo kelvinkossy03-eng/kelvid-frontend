@@ -3,7 +3,6 @@ import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import { AuthProvider } from './auth.jsx'
 import AuthModal from './AuthModal.jsx'
-import './styles.css'
 import './sora.css'
 import './auth.css'
 

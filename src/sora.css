@@ -8,10 +8,41 @@
   --text-muted: #a7adbd;
   --text-dim: #777d90;
   --primary: #ffffff;
+  --primary-glow: rgba(255, 255, 255, 0.25);
   --accent: #9be1ff;
+  --danger: #fb7185;
+  --success: #34d399;
+  --warning: #fbbf24;
   --radius: 18px;
   --radius-lg: 26px;
 }
+
+/* ===== Utility classes (replaces inline styles) ===== */
+.mt-2 { margin-top: 8px; }
+.mt-10 { margin-top: 10px; }
+.gap-8 { gap: 8px; }
+.text-none { text-decoration: none; }
+.text-danger { color: var(--danger); }
+.text-sm { font-size: 11px; }
+.text-muted { color: var(--text-muted); }
+.px-sm { padding: 4px 10px; }
+.row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.live-queue-label { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
+
+/* ===== Page shell (shared layout for non-studio routes) ===== */
+.page-shell { max-width: 1120px; margin: 0 auto; padding: 34px 22px 70px; display: grid; gap: 18px; }
+.page-hero h1 { font-size: clamp(30px, 5vw, 52px); letter-spacing: -0.04em; margin: 0 0 6px; }
+.page-hero p { color: var(--text-muted); max-width: 640px; font-size: 15px; line-height: 1.6; }
+.card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.info-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.09); border-radius: 18px; padding: 16px; }
+.info-card h3 { margin: 0 0 6px; font-size: 16px; }
+.info-card p { margin: 0; color: var(--text-muted); font-size: 13px; line-height: 1.6; }
+
+/* ===== Card sub-elements ===== */
+.card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.card-sub { color: var(--text-muted); font-size: 13px; margin-top: 4px; }
+
+/* ===== Existing component styles (kept, monochrome theme) ===== */
 body {
   background:
     radial-gradient(1100px 500px at 70% -10%, rgba(120, 170, 255, 0.12), transparent 60%),
