@@ -1,5 +1,6 @@
 ﻿import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { API_BASE, apiFetch, resolveUrl } from './api.js'
+import { useAuth } from './auth.jsx'
 
 // Global error handlers — log errors so we can diagnose blank-screen issues in production
 window.onerror = (msg, url, line, col, err) => {
@@ -75,6 +76,9 @@ function usePollJob(onDone) {
 }
 
 export default function App() {
+  const { user, openAuth, signOut } = useAuth()
+  const [route, setRoute] = useState('studio')
+  const [accountOpen, setAccountOpen] = useState(false)
   const [prompt, setPrompt] = useState(IDEAS[0])
   const [negativePrompt, setNegativePrompt] = useState('')
   const [models, setModels] = useState([])
@@ -236,11 +240,42 @@ export default function App() {
             <h1>Kelvid Studio</h1>
             <small>AI Video Generation</small>
           </div>
+          <div className="nav-links" role="navigation" aria-label="Primary">
+            {['studio', 'gallery', 'plans', 'docs', 'settings'].map((r) => (
+              <button key={r} type="button" className={route === r ? 'active' : ''} onClick={() => setRoute(r)}>
+                {r[0].toUpperCase() + r.slice(1)}
+              </button>
+            ))}
+          </div>
           <div className="spacer" />
-          <div className="status-pill">
+          <span className="credit-pill" title="Remaining generation credits">Credits: {user ? user.credits : 65}</span>
+          <div className="status-pill" title="Backend connection status">
             <span className={`dot ${health.includes('NO HF TOKEN') ? 'offline' : health.includes('online') ? 'online' : 'offline'}`} />
             <span>{health}</span>
           </div>
+          {!user && (
+            <>
+              <button type="button" className="btn-ghost" onClick={() => openAuth('signin')}>Sign in</button>
+              <button type="button" className="btn btn-primary" style={{ padding: '8px 14px' }} onClick={() => openAuth('signup')}>Get started</button>
+            </>
+          )}
+          {user && (
+            <div className="account-menu">
+              <button type="button" className="btn-ghost account-chip" onClick={() => setAccountOpen((v) => !v)} aria-haspopup="menu" aria-expanded={accountOpen}>
+                <span aria-hidden="true">Account</span>
+                <strong>{user.name}</strong>
+              </button>
+              {accountOpen && (
+                <div className="account-dropdown" role="menu">
+                  <strong>{user.name}</strong>
+                  <small>{user.email} | {user.plan} plan | {user.credits} credits</small>
+                  <button type="button" className="btn-ghost" onClick={() => { setRoute('settings'); setAccountOpen(false) }}>Settings</button>
+                  <button type="button" className="btn-ghost" onClick={() => { setRoute('plans'); setAccountOpen(false) }}>Billing and plans</button>
+                  <button type="button" className="btn-ghost" onClick={() => { signOut(); setAccountOpen(false); toast('Signed out.') }}>Log out</button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </nav>
 
@@ -309,7 +344,8 @@ export default function App() {
 
             <div className="field-group">
               <div className="field-label">
-                <span>Inspiration</span>
+                <span>Try an inspiration prompt</span>
+                <span className="field-count">Tap to fill the prompt box</span>
               </div>
               <div className="chips">
                 {IDEAS.map((idea, i) => (
@@ -318,6 +354,7 @@ export default function App() {
                     type="button"
                     className={`chip ${prompt === idea ? 'active' : ''}`}
                     onClick={() => setPrompt(idea)}
+                    title={idea}
                   >
                     {idea.slice(0, 30)}...
                   </button>
@@ -325,8 +362,8 @@ export default function App() {
               </div>
             </div>
 
-            <details className="glass">
-              <summary>Advanced settings</summary>
+            <details className="glass" open>
+              <summary>Advanced settings — duration, quality, seed (click to collapse)</summary>
               <div className="accordion-body row-2">
                 <div>
                   <label htmlFor="frames">Duration and frames</label>
@@ -351,7 +388,7 @@ export default function App() {
                     value={frames}
                     onChange={(e) => setFrames(+e.target.value)}
                   />
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{frames} frames | {Math.round(frames / 24)}s (up to 60s)</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Output: {frames} frames at 24 fps = {Math.round(frames / 24)} seconds (maximum 60 seconds)</span>
                 </div>
                 <div>
                   <label htmlFor="steps">Steps ({steps})</label>
@@ -392,39 +429,41 @@ export default function App() {
             </details>
 
             <details className="glass">
-              <summary>API key (if server requires)</summary>
+              <summary>Backend API key — only if your server requires one</summary>
               <div className="accordion-body">
-                <label htmlFor="apiKey">X-API-Key</label>
+                <label htmlFor="apiKey">API key (sent as X-API-Key header)</label>
                 <input
                   id="apiKey"
                   name="apiKey"
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="paste server key..."
+                  placeholder="Paste server key... (see Docs page)"
                 />
               </div>
             </details>
 
-            <button className="btn btn-primary btn-generate" type="submit" disabled={busy}>
-              {busy ? 'Queuing...' : 'Generate video'}
+            <button className="btn btn-primary btn-generate" type="submit" disabled={busy || !prompt.trim()} title={!prompt.trim() ? 'Enter a prompt first' : 'Generate video'}>
+              {busy ? 'Queuing and generating...' : `Generate video (${user ? user.credits : 65} credits available)`}
             </button>
+            {!prompt.trim() && <div className="err-msg">Enter a prompt above to enable Generate.</div>}
 
-            {error && <div className="err-msg">{error}</div>}
+            {error && <div className="err-msg" role="alert">Generation error: {error}</div>}
 
-            <div className="live-queue-label">Live queue</div>
+            <div className="live-queue-label">Live queue — queued, running, done, failed</div>
             <div className="jobs-list">
-              {jobs.length === 0 && <div className="job-row"><small>No jobs yet</small></div>}
+              {jobs.length === 0 && <div className="job-row"><small>No jobs yet. Your generations will appear here with timestamps and status.</small></div>}
               {jobs.slice(0, 10).map((j) => (
-                <div className="job-row" key={j.job_id}>
+                <div className="job-row" key={j.job_id} title={`Job ${j.job_id} — ${j.status}`}>
                   <span className={`status-badge ${j.status}`}>{j.status}</span>
-                  <small className="job-prompt">{j.prompt ? j.prompt.slice(0, 60) : ''}</small>
+                  <small className="job-prompt">{j.prompt ? j.prompt.slice(0, 60) : '(no prompt)'} | {(j.created_at || '').slice(0, 19).replace('T', ' ')}</small>
                   <div className="job-actions">
                   {j.status === 'done' && j.url && (
-                    <button type="button" className="btn-ghost" onClick={() => { setVideoUrl(resolveUrl(j.url)); setVideoMeta('From queue') }}>Play</button>
+                    <button type="button" className="btn-ghost" onClick={() => { setVideoUrl(resolveUrl(j.url)); setVideoMeta(`From queue ${j.job_id.slice(0, 6)}`) }}>Play</button>
                   )}
                   {j.status === 'failed' && (
                     <button type="button" className="btn-ghost" onClick={() => retryJob(j.job_id)}>Retry</button>
                   )}
+                  {j.error && <small style={{ color: 'var(--danger)' }}>{String(j.error).slice(0, 80)}</small>}
                 </div>
               </div>
             ))}
@@ -437,7 +476,7 @@ export default function App() {
             <div className="card-header">
               <div>
                 <h2>Preview</h2>
-                <div className="card-sub">{videoMeta || 'Your video will appear here.'}</div>
+                <div className="card-sub">{videoMeta || 'Your video will appear here with playback controls.'}</div>
               </div>
               {videoUrl && (
                 <a className="btn-ghost" href={videoUrl} download style={{ textDecoration: 'none' }}>⬇️ Download</a>
@@ -446,7 +485,7 @@ export default function App() {
             {!videoUrl && (
               <div className="preview-empty">
                 <span className="big">🎬</span>
-                <p>Generate your first video to see it here.</p>
+                <p>Generate your first video to see playback, download, and share controls here.</p>
               </div>
             )}
             {videoUrl && (
@@ -460,14 +499,15 @@ export default function App() {
             <div className="card-header">
               <div>
                 <h2>Gallery</h2>
-                <div className="card-sub">{shown.length} videos</div>
+                <div className="card-sub">{shown.length} videos in your archive</div>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <input
                   className="gallery-search"
                   value={filter}
                   onChange={(e) => setFilter(e.target.value)}
-                  placeholder="Search prompts..."
+                  placeholder="Search gallery by prompt..."
+                  aria-label="Search gallery by prompt"
                 />
                 <button type="button" className="btn-ghost" onClick={() => { refreshGallery(); refreshJobs() }}>⇨️</button>
               </div>
@@ -485,10 +525,13 @@ export default function App() {
                   </div>
                 </div>
               ))}
-              {shown.length === 0 && (
+              {gallery.length > 0 && (
+                <button type="button" className="btn-ghost" style={{ marginBottom: 10 }} onClick={() => { if (window.confirm('Delete all gallery videos?')) { gallery.forEach((g) => removeItem(g.filename)) } }}>Delete all videos</button>
+              )}
+              {shown.length === 0 && gallery.length === 0 && (
                 <div className="gallery-empty">
                   <span className="big">📁</span>
-                  <p>No videos yet. Generate your first one!</p>
+                  <p>No videos match. Generate your first video from Studio, or clear the search above.</p>
                 </div>
               )}
             </div>
@@ -496,14 +539,67 @@ export default function App() {
         </div>
       </main>
 
-      <div className="toasts-container">
+      {route !== 'studio' && (
+        <div className="page-shell">
+          {route === 'gallery' && (
+            <>
+              <div className="page-hero"><h1>Gallery</h1><p>Every render is saved here. Use Studio search for quick filtering; this is your full archive view.</p></div>
+              <div className="info-card"><h3>{shown.length} videos</h3><p>Tip: open Studio, then use Gallery search to filter by prompt text.</p></div>
+            </>
+          )}
+          {route === 'plans' && (
+            <>
+              <div className="page-hero"><h1>Plans and credits</h1><p>Start free with 65 credits. Each generation uses credits based on duration and steps.</p></div>
+              <div className="card-grid">
+                <div className="info-card"><h3>Starter — Free</h3><p>65 credits, 720p, community support. Current default plan.</p></div>
+                <div className="info-card"><h3>Creator — $19/mo</h3><p>1,000 credits, 1080p, priority queue, commercial use.</p></div>
+                <div className="info-card"><h3>Studio — $79/mo</h3><p>5,000 credits, 4K upscales, API access, team seats.</p></div>
+              </div>
+              <div className="info-card"><h3>How credits work</h3><p>Short clips use fewer credits. Longer duration, more frames, and higher steps cost more. Failed jobs are not charged.</p></div>
+            </>
+          )}
+          {route === 'docs' && (
+            <>
+              <div className="page-hero"><h1>Docs and API key help</h1><p>Connect the frontend to your backend, then generate from Studio.</p></div>
+              <div className="info-card"><h3>1. Set VITE_API_URL</h3><p>In Vercel: Settings → Environment Variables → VITE_API_URL = your backend URL (for example https://kelvid-backend.onrender.com). Redeploy after saving.</p></div>
+              <div className="info-card"><h3>2. API key</h3><p>Only needed if your backend sets KELVID_API_KEY. Paste it in Studio → API key field. Requests send it as the X-API-Key header.</p></div>
+              <div className="info-card"><h3>3. Health check</h3><p>Open /api/health on your backend. It must return JSON with status ok. If it returns HTML, VITE_API_URL is wrong or the backend is down.</p></div>
+            </>
+          )}
+          {route === 'settings' && (
+            <>
+              <div className="page-hero"><h1>Settings</h1><p>Account, API connection, defaults, and data controls.</p></div>
+              <div className="info-card">
+                <h3>Account</h3>
+                <p>{user ? `${user.name} (${user.email}) — ${user.plan}, ${user.credits} credits` : 'You are browsing as a guest. Sign in to save your profile.'}</p>
+                {!user && <button type="button" className="btn-ghost" style={{ marginTop: 8 }} onClick={() => openAuth('signin')}>Sign in</button>}
+                {user && <button type="button" className="btn-ghost" style={{ marginTop: 8 }} onClick={() => { signOut(); toast('Signed out.') }}>Log out</button>}
+              </div>
+              <div className="info-card">
+                <h3>API connection</h3>
+                <p>Backend: {API_BASE || 'same-origin'} | Status: {health}</p>
+                <div className="settings-row"><span>Backend API key header</span><span>X-API-Key</span></div>
+                <div className="settings-row"><span>Default frames</span><span>{frames} frames ({Math.round(frames / 24)}s)</span></div>
+                <div className="settings-row"><span>Default model</span><span>{selectedModel ? selectedModel.split('/').pop() : 'Auto-select'}</span></div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      <div className="toasts-container" aria-live="polite">
         {toasts.map((t) => (
           <div key={t.id} className="toast">{t.msg}</div>
         ))}
       </div>
 
       <footer>
-        Kelvid | React + FastAPI + Hugging Face | API: {API_BASE || 'same-origin'}
+        <div><strong>Kelvid Studio</strong> | React + FastAPI + Hugging Face | API: {API_BASE || 'same-origin'}</div>
+        <div style={{ marginTop: 8, display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <span>Terms</span><span>Privacy</span><span>Support: help@kelvid.studio</span>
+          <button type="button" className="btn-ghost" style={{ padding: '4px 10px' }} onClick={() => setRoute('docs')}>Docs</button>
+          <button type="button" className="btn-ghost" style={{ padding: '4px 10px' }} onClick={() => setRoute('plans')}>Pricing</button>
+        </div>
       </footer>
       </div>
     </ErrorBoundary>
