@@ -49,7 +49,7 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-function usePollJob(onDone) {
+function usePollJob(onDone, onError) {
   const polling = useRef(new Set())
   const poll = useCallback(async (id) => {
     if (polling.current.has(id)) return
@@ -60,7 +60,7 @@ function usePollJob(onDone) {
         await new Promise((r) => setTimeout(r, 4000))
         let j
         try { j = await apiFetch(`/api/jobs/${id}`) } catch (err) {
-          toast(`Poll failed: ${err.message}`)
+          if (onError) onError(`Poll failed: ${err.message}`)
           break
         }
         onDone(j, Math.round((Date.now() - t0) / 1000))
@@ -69,21 +69,13 @@ function usePollJob(onDone) {
     } finally {
       polling.current.delete(id)
     }
-  }, [onDone])
+  }, [onDone, onError])
   return poll
 }
 
 export default function App() {
   const { user, loading, openAuth, signOut } = useAuth()
 
-  if (loading) {
-    return (
-      <div className="wrap" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80vh', color: 'var(--text)' }}>
-        <div className="spinner" style={{ width: 36, height: 36, border: '3px solid var(--muted)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-        <p style={{ marginTop: 16 }}>Signing you in…</p>
-      </div>
-    )
-  }
   const [route, setRoute] = useState('studio')
   const [accountOpen, setAccountOpen] = useState(false)
   const [prompt, setPrompt] = useState('')
@@ -147,7 +139,7 @@ export default function App() {
     if (j.status === 'failed') setError('Failed: ' + (j.error || 'unknown'))
   }, [refreshJobs, refreshGallery, toast])
 
-  const poll = usePollJob(handleJob)
+  const poll = usePollJob(handleJob, toast)
 
   useEffect(() => {
     apiFetch('/api/health').then((d) => {
@@ -235,6 +227,15 @@ export default function App() {
   }, [refreshGallery, toast, apiKey])
 
   const userCredits = user ? user.credits : 65
+
+  if (loading) {
+    return (
+      <div className="wrap loading-screen">
+        <div className="spinner" />
+        <p>Signing you in…</p>
+      </div>
+    )
+  }
 
   return (
     <ErrorBoundary>

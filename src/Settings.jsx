@@ -1,4 +1,5 @@
 import React from 'react'
+import { API_BASE } from './api.js'
 
 export default function Settings({ user, health, openAuth, signOut, toast, frames, selectedModel, selectedProvider }) {
   return (
@@ -17,7 +18,7 @@ export default function Settings({ user, health, openAuth, signOut, toast, frame
       </div>
       <div className="info-card">
         <h3>API connection</h3>
-        <p>Backend: same-origin | Status: {health}</p>
+        <p>Backend: {API_BASE || 'same-origin'} | Status: {health}</p>
         <div className="settings-row"><span>Backend API key header</span><span>X-API-Key</span></div>
         <div className="settings-row"><span>Default frames</span><span>{frames} frames ({Math.round(frames / 24)}s)</span></div>
         <div className="settings-row"><span>Default model</span><span>{selectedModel ? selectedModel.split('/').pop() : 'Auto-select'}</span></div>

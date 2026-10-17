@@ -1,5 +1,6 @@
 import React from 'react'
 import { IDEAS } from './constants.js'
+import { resolveUrl } from './api.js'
 
 export default function Studio({
   prompt, setPrompt, negativePrompt, setNegativePrompt,
@@ -198,7 +199,7 @@ export default function Studio({
                 <small className="job-prompt">{j.prompt ? j.prompt.slice(0, 60) : '(no prompt)'} | {(j.created_at || '').slice(0, 19).replace('T', ' ')}</small>
                 <div className="job-actions">
                   {j.status === 'done' && j.url && (
-                    <button type="button" className="btn-ghost" onClick={() => { setVideoUrl(videoUrl); setVideoMeta(`From queue ${j.job_id.slice(0, 6)}`) }}>Play</button>
+                    <button type="button" className="btn-ghost" onClick={() => { setVideoUrl(resolveUrl(j.url)); setVideoMeta(`From queue ${j.job_id.slice(0, 6)}`) }}>Play</button>
                   )}
                   {j.status === 'failed' && (
                     <button type="button" className="btn-ghost" onClick={() => retryJob(j.job_id)}>Retry</button>

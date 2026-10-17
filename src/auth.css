@@ -1,3 +1,4 @@
+/* ===== Auth modal & account menu ===== */
 .modal-backdrop {
   position: fixed; inset: 0; z-index: 100;
   background: rgba(3, 3, 6, 0.7);
@@ -13,6 +14,7 @@
   box-shadow: 0 40px 100px rgba(0,0,0,0.6);
 }
 .modal-head { display: flex; gap: 12px; align-items: flex-start; }
+.modal-head img { border-radius: 12px; }
 .modal-head h2 { margin: 0; font-size: 20px; letter-spacing: -0.02em; }
 .modal-head p { margin: 6px 0 0; color: #a8afc2; font-size: 13px; }
 .modal-head .btn-ghost { margin-left: auto; }
@@ -26,6 +28,41 @@
 .modal-tabs button.active { background: #fff; color: #111; border-color: #fff; }
 .modal-form { display: grid; gap: 12px; }
 .modal-fine { color: #777d90; font-size: 12px; margin: 2px 0 0; }
+
+/* Auth form fields (sora-*) */
+.sora-field { display: flex; flex-direction: column; gap: 6px; }
+.sora-field label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #a7adbd;
+}
+.sora-input { border-radius: 14px; }
+.sora-generate {
+  width: 100%;
+  padding: 13px 18px;
+  border: none;
+  border-radius: 14px;
+  background: #fff;
+  color: #060608;
+  font-size: 14.5px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.2s ease, opacity 0.2s ease;
+}
+.sora-generate:hover:not(:disabled) { background: #e5e9f5; }
+.sora-generate:disabled { opacity: 0.55; cursor: not-allowed; }
+.sora-error {
+  background: rgba(251, 113, 133, 0.1);
+  border: 1px solid rgba(251, 113, 133, 0.3);
+  color: var(--danger);
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+}
+
+/* ===== Nav links & account ===== */
 .nav-links { display: flex; gap: 6px; align-items: center; }
 .nav-links button {
   background: transparent; border: 1px solid transparent; color: #cfd4e4;
@@ -43,15 +80,17 @@
 .account-dropdown strong { display: block; font-size: 13px; }
 .account-dropdown small { color: #98a0b6; font-size: 12px; display: block; margin: 2px 0 10px; }
 .account-dropdown button { width: 100%; margin-top: 8px; }
-.credit-pill { border: 1px solid rgba(255,255,255,0.14); border-radius: 999px; padding: 6px 10px; font-size: 12px; background: rgba(255,255,255,0.05); }
-.page-shell { max-width: 1120px; margin: 0 auto; padding: 34px 22px 70px; display: grid; gap: 18px; }
-.page-hero h1 { font-size: clamp(30px, 5vw, 52px); letter-spacing: -0.04em; margin: 0; }
-.page-hero p { color: #a8afc2; max-width: 640px; }
-.card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
-.info-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.09); border-radius: 18px; padding: 16px; }
-.info-card h3 { margin: 0 0 6px; }
-.info-card p { margin: 0; color: #a8afc2; font-size: 13px; }
-.table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.table th, .table td { text-align: left; padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.08); }
-.settings-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.07); }
-@media (max-width: 860px) { .nav-links { display: none; } }
+.credit-pill { border: 1px solid rgba(255,255,255,0.14); border-radius: 999px; padding: 6px 10px; font-size: 12px; background: rgba(255,255,255,0.05); white-space: nowrap; }
+
+/* Mobile: keep links reachable via a scrollable row instead of hiding them */
+@media (max-width: 860px) {
+  .nav-links {
+    order: 10;
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    scrollbar-width: none;
+  }
+  .nav-links::-webkit-scrollbar { display: none; }
+  .account-dropdown { right: auto; left: 0; }
+}
