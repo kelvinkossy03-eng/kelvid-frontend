@@ -99,3 +99,7 @@ textarea:focus, select:focus, input:focus { border-color: var(--border-strong); 
 .toast { background: rgba(10,10,14,0.92); border-left-color: #fff; }
 footer { border-top: 1px solid var(--border); }
 @media (max-width: 1020px) { main { grid-template-columns: 1fr; } .panel-left { position: static; } }
+
+@keyframes spin {
+  to { transform: rotate(360deg) }
+}

@@ -74,7 +74,16 @@ function usePollJob(onDone) {
 }
 
 export default function App() {
-  const { user, openAuth, signOut } = useAuth()
+  const { user, loading, openAuth, signOut } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="wrap" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80vh', color: 'var(--text)' }}>
+        <div className="spinner" style={{ width: 36, height: 36, border: '3px solid var(--muted)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+        <p style={{ marginTop: 16 }}>Signing you in…</p>
+      </div>
+    )
+  }
   const [route, setRoute] = useState('studio')
   const [accountOpen, setAccountOpen] = useState(false)
   const [prompt, setPrompt] = useState('')
