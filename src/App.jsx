@@ -9,6 +9,7 @@ import Docs from './Docs.jsx'
 import Settings from './Settings.jsx'
 import ToastContainer from './ToastContainer.jsx'
 import Footer from './Footer.jsx'
+import Landing from './Landing.jsx'
 
 window.onerror = (msg, url, line, col, err) => {
   console.error('Uncaught error:', msg, 'at', url, ':', line, ':', col, err)
@@ -73,10 +74,40 @@ function usePollJob(onDone, onError) {
   return poll
 }
 
+const PROTECTED_ROUTES = ['studio', 'gallery', 'settings']
+
+function AuthGate({ openAuth, title, body }) {
+  return (
+    <div className="auth-gate">
+      <div className="auth-gate-card glass-card">
+        <img src="/logo.svg" alt="" width="56" height="56" className="auth-gate-logo" />
+        <h2>{title || 'Sign in to continue'}</h2>
+        <p>
+          {body || 'The studio, your gallery, and settings are private to your account. Create a free account — it takes less than a minute.'}
+        </p>
+        <ul className="auth-gate-list">
+          <li>65 free credits on signup — several full renders</li>
+          <li>Private cloud gallery with search, download, delete</li>
+          <li>Live queue with retry and job history</li>
+        </ul>
+        <div className="auth-gate-actions">
+          <button type="button" className="btn btn-primary" onClick={() => openAuth('signup')}>
+            Create free account
+          </button>
+          <button type="button" className="btn-ghost" onClick={() => openAuth('signin')}>
+            I already have an account
+          </button>
+        </div>
+        <p className="auth-gate-fine">No card required. Powered by Firebase Authentication.</p>
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
   const { user, loading, openAuth, signOut } = useAuth()
 
-  const [route, setRoute] = useState('studio')
+  const [route, setRoute] = useState('landing')
   const [accountOpen, setAccountOpen] = useState(false)
   const [prompt, setPrompt] = useState('')
   const [negativePrompt, setNegativePrompt] = useState('')
@@ -141,7 +172,13 @@ export default function App() {
 
   const poll = usePollJob(handleJob, toast)
 
+  // Only talk to the backend once a user is signed in — guests see the public
+  // landing page and never receive jobs, gallery, health, or model data.
   useEffect(() => {
+    if (!user) {
+      setHealth('offline')
+      return undefined
+    }
     apiFetch('/api/health').then((d) => {
       if (!d) return
       setHealth(d.token_configured ? `online v${d.version} | ${d.active_jobs} active` : 'online | NO HF TOKEN')
@@ -161,7 +198,12 @@ export default function App() {
       }).catch(() => setHealth('cannot reach backend'))
     }, 15000)
     return () => clearInterval(h)
-  }, [])
+  }, [user, refreshJobs, refreshGallery, toast])
+
+  // If the user signs out while on a private route, fall back to the landing page.
+  useEffect(() => {
+    if (!user && PROTECTED_ROUTES.includes(route)) setRoute('landing')
+  }, [user, route])
 
   const submit = useCallback(async (e) => {
     e.preventDefault()
@@ -252,7 +294,11 @@ export default function App() {
           toast={toast}
         />
 
-        {route === 'studio' && (
+        {route === 'landing' && (
+          <Landing user={user} openAuth={openAuth} setRoute={setRoute} />
+        )}
+
+        {route === 'studio' && (user ? (
           <Studio
             prompt={prompt}
             setPrompt={setPrompt}
@@ -291,35 +337,53 @@ export default function App() {
             videoMeta={videoMeta}
             setVideoMeta={setVideoMeta}
           />
-        )}
+        ) : (
+          <AuthGate openAuth={openAuth} />
+        ))}
 
-        {route === 'gallery' && <Gallery
-          shown={gallery.filter((x) => {
-            const q = filter.toLowerCase()
-            return !q || (x.prompt || '').toLowerCase().includes(q)
-          })}
-          gallery={gallery}
-          filter={filter}
-          setFilter={setFilter}
-          refreshGallery={refreshGallery}
-          refreshJobs={refreshJobs}
-          removeItem={removeItem}
-        />}
+        {route === 'gallery' && (user ? (
+          <Gallery
+            shown={gallery.filter((x) => {
+              const q = filter.toLowerCase()
+              return !q || (x.prompt || '').toLowerCase().includes(q)
+            })}
+            gallery={gallery}
+            filter={filter}
+            setFilter={setFilter}
+            refreshGallery={refreshGallery}
+            refreshJobs={refreshJobs}
+            removeItem={removeItem}
+          />
+        ) : (
+          <AuthGate
+            openAuth={openAuth}
+            title="Your gallery is private"
+            body="Sign in to browse, replay, download, and delete your generated videos."
+          />
+        ))}
 
         {route === 'plans' && <Plans />}
 
         {route === 'docs' && <Docs />}
 
-        {route === 'settings' && <Settings
-          user={user}
-          health={health}
-          openAuth={openAuth}
-          signOut={signOut}
-          toast={toast}
-          frames={frames}
-          selectedModel={selectedModel}
-          selectedProvider={selectedProvider}
-        />}
+        {route === 'settings' && (user ? (
+          <Settings
+            user={user}
+            health={health}
+            openAuth={openAuth}
+            signOut={signOut}
+            toast={toast}
+            frames={frames}
+            selectedModel={selectedModel}
+            selectedProvider={selectedProvider}
+          />
+        ) : (
+          <AuthGate
+            openAuth={openAuth}
+            title="Settings are account-only"
+            body="Sign in to manage your profile, view plan details, and check backend connectivity."
+          />
+        ))}
 
         <ToastContainer toasts={toasts} />
         <Footer setRoute={setRoute} />
