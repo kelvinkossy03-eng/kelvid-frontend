@@ -10,7 +10,6 @@ export function useKelvid() {
 }
 
 export function KelvidProvider({ children }) {
-  // ---- Auth ----
   const [user, setUser] = useState(() => {
     try {
       const saved = localStorage.getItem('kelvid-user')
@@ -20,8 +19,6 @@ export function KelvidProvider({ children }) {
     }
   })
   const [apiKey, setApiKeyState] = useState(() => localStorage.getItem('kelvid-api-key') || '')
-
-  // ---- App state ----
   const [route, setRoute] = useState(user ? 'studio' : 'landing')
   const [prompt, setPrompt] = useState('')
   const [negativePrompt, setNegativePrompt] = useState('')
@@ -42,7 +39,6 @@ export function KelvidProvider({ children }) {
   const [toasts, setToasts] = useState([])
   const [health, setHealth] = useState('checking...')
 
-  // ---- Auth helpers ----
   const login = useCallback((email, name = '') => {
     const u = { email, name: name || email.split('@')[0], credits: 65 }
     localStorage.setItem('kelvid-user', JSON.stringify(u))
@@ -66,15 +62,27 @@ export function KelvidProvider({ children }) {
     setGlobalApiKey(apiKey)
   }, [apiKey])
 
-  // ---- Toasts ----
   const toast = useCallback((msg, type = 'info') => {
     const id = Math.random().toString(36).slice(2)
     setToasts((t) => [...t, { id, msg, type }])
-    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 4000)
+    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3800)
   }, [])
 
-  // ---- Polling ----
   const polling = useRef(new Set())
+  const refreshJobs = useCallback(async () => {
+    try {
+      const d = await apiFetch('/api/jobs')
+      setJobs(d.jobs || [])
+    } catch {}
+  }, [])
+
+  const refreshGallery = useCallback(async () => {
+    try {
+      const d = await apiFetch('/api/gallery')
+      setGallery((d.items || []).map((x) => ({ ...x, url: resolveUrl(x.url) })))
+    } catch {}
+  }, [])
+
   const pollJob = useCallback(async (id) => {
     if (polling.current.has(id)) return
     polling.current.add(id)
@@ -94,7 +102,7 @@ export function KelvidProvider({ children }) {
         if (j.status === 'done') {
           setVideoUrl(resolveUrl(j.url))
           setVideoMeta(`Ready in ${elapsed}s · ${j.model || ''}`)
-          toast('Video ready!', 'success')
+          toast('Video ready', 'success')
           refreshGallery()
           refreshJobs()
           break
@@ -110,24 +118,8 @@ export function KelvidProvider({ children }) {
     } finally {
       polling.current.delete(id)
     }
-  }, [toast])
+  }, [toast, refreshGallery, refreshJobs])
 
-  // ---- Data fetchers ----
-  const refreshJobs = useCallback(async () => {
-    try {
-      const d = await apiFetch('/api/jobs')
-      setJobs(d.jobs || [])
-    } catch {}
-  }, [])
-
-  const refreshGallery = useCallback(async () => {
-    try {
-      const d = await apiFetch('/api/gallery')
-      setGallery((d.items || []).map((x) => ({ ...x, url: resolveUrl(x.url) })))
-    } catch {}
-  }, [])
-
-  // ---- Initial load ----
   useEffect(() => {
     apiFetch('/api/health')
       .then((d) => {
@@ -158,7 +150,6 @@ export function KelvidProvider({ children }) {
     return () => clearInterval(h)
   }, [refreshJobs, refreshGallery])
 
-  // ---- Generate ----
   const submit = useCallback(async (e) => {
     e?.preventDefault?.()
     if (!prompt.trim()) return

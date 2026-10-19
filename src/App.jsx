@@ -1,15 +1,16 @@
 import React from 'react'
+import { ThemeProvider } from './context/ThemeContext.jsx'
 import { KelvidProvider, useKelvid } from './context/KelvidContext.jsx'
-import Nav from './Nav.jsx'
+import Nav from './components/Nav.jsx'
+import Footer from './components/Footer.jsx'
+import ToastContainer from './components/ToastContainer.jsx'
 import Login from './pages/Login.jsx'
-import Landing from './Landing.jsx'
-import Studio from './Studio.jsx'
-import Gallery from './Gallery.jsx'
-import Plans from './Plans.jsx'
-import Docs from './Docs.jsx'
-import Settings from './Settings.jsx'
-import Footer from './Footer.jsx'
-import ToastContainer from './ToastContainer.jsx'
+import Landing from './pages/Landing.jsx'
+import Studio from './pages/Studio.jsx'
+import Gallery from './pages/Gallery.jsx'
+import Plans from './pages/Plans.jsx'
+import Docs from './pages/Docs.jsx'
+import Settings from './pages/Settings.jsx'
 
 class ErrorBoundary extends React.Component {
   state = { hasError: false, error: null }
@@ -35,7 +36,7 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-function AppContent() {
+function AppShell() {
   const { route, toasts } = useKelvid()
 
   if (route === 'login') return <Login />
@@ -43,14 +44,16 @@ function AppContent() {
   return (
     <div className="app">
       <Nav />
-      <div className="page">
-        {route === 'landing' && <Landing />}
-        {route === 'studio' && <Studio />}
-        {route === 'gallery' && <Gallery />}
-        {route === 'plans' && <Plans />}
-        {route === 'docs' && <Docs />}
-        {route === 'settings' && <Settings />}
-      </div>
+      <main className="page" key={route}>
+        <div className="page-enter">
+          {route === 'landing' && <Landing />}
+          {route === 'studio' && <Studio />}
+          {route === 'gallery' && <Gallery />}
+          {route === 'plans' && <Plans />}
+          {route === 'docs' && <Docs />}
+          {route === 'settings' && <Settings />}
+        </div>
+      </main>
       <Footer />
       <ToastContainer toasts={toasts} />
     </div>
@@ -60,9 +63,11 @@ function AppContent() {
 export default function App() {
   return (
     <ErrorBoundary>
-      <KelvidProvider>
-        <AppContent />
-      </KelvidProvider>
+      <ThemeProvider>
+        <KelvidProvider>
+          <AppShell />
+        </KelvidProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   )
 }
