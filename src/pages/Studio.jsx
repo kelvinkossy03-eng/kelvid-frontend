@@ -8,7 +8,7 @@ export default function Studio() {
     prompt, setPrompt, negativePrompt, setNegativePrompt,
     models, selectedModel, setSelectedModel, selectedProvider, setSelectedProvider,
     frames, setFrames, steps, setSteps, guide, setGuide, seed, setSeed,
-    busy, error, submit, retryJob, removeItem,
+    busy, rendering, error, submit, retryJob, removeItem,
     jobs, gallery, filter, setFilter,
     videoUrl, setVideoUrl, videoMeta, setVideoMeta,
     refreshGallery, refreshJobs, user, setRoute,
@@ -16,6 +16,10 @@ export default function Studio() {
 
   const [showAdv, setShowAdv] = useState(false)
   const [showNeg, setShowNeg] = useState(false)
+
+  const generating = busy || rendering
+  const activeJob = jobs.find((j) => j.status === 'running' || j.status === 'queued')
+  const phase = activeJob?.status === 'running' ? 'Rendering your video' : 'Waiting in the queue'
 
   const shown = gallery.filter((x) => {
     const q = filter.toLowerCase()
@@ -92,7 +96,7 @@ export default function Studio() {
               <button type="button" className="stu-link" onClick={() => setShowNeg((v) => !v)}>
                 {showNeg ? 'Hide negative' : 'Negative'}
               </button>
-              <button type="submit" className="btn-main" disabled={busy || !prompt.trim()}>
+              <button type="submit" className="btn-main cta" disabled={busy || !prompt.trim()}>
                 {busy ? 'Queuing…' : 'Generate'}
               </button>
             </div>
@@ -138,9 +142,20 @@ export default function Studio() {
 
         {/* Preview stage */}
         <div className="stu-stage">
-          {!videoUrl ? (
+          {!videoUrl && generating ? (
+            <div className="stu-gen" role="status" aria-live="polite">
+              <div className="stu-gen-scene" aria-hidden="true">
+                <div className="sun" /><div className="hill" /><div className="scan" />
+              </div>
+              <div className="stu-gen-title">{busy ? 'Sending your prompt' : phase}</div>
+              <div className="stu-gen-bar" aria-hidden="true"><i /></div>
+              <div className="stu-gen-meta">{videoMeta || 'This can take a minute or two.'}</div>
+            </div>
+          ) : !videoUrl ? (
             <div className="stu-stage-empty">
-              <div className="stu-stage-mark">◎</div>
+              <div className="stu-stage-mark" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z" /></svg>
+              </div>
               <p>Generated video plays here</p>
             </div>
           ) : (
@@ -148,6 +163,12 @@ export default function Studio() {
               <video key={videoUrl} src={videoUrl} controls autoPlay loop playsInline />
               <div className="stu-stage-meta">
                 <span>{videoMeta}</span>
+                {generating && (
+                  <span className="stu-rendering">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" opacity="0.25" /><path d="M12 3a9 9 0 0 1 9 9" /></svg>
+                    Rendering another clip
+                  </span>
+                )}
                 <a href={videoUrl} download className="stu-link">Download</a>
               </div>
             </div>

@@ -48,8 +48,8 @@ export default function Gallery() {
         </div>
       ) : (
         <div className="gal-masonry">
-          {shown.map((x) => (
-            <article key={x.filename} className="gal-item" onClick={() => setActive(x)}>
+          {shown.map((x, i) => (
+            <article key={x.filename} className="gal-item" style={{ animationDelay: `${Math.min(i, 12) * 60}ms` }} onClick={() => setActive(x)}>
               <video src={x.url} muted preload="metadata" />
               <div className="gal-item-info">
                 <p>{x.prompt || 'Untitled'}</p>
