@@ -13,14 +13,9 @@ export default function Nav() {
   const { route, setRoute, user, logout, health } = useKelvid()
 
   return (
-    <header className="nav">
+    <nav className="nav">
       <div className="nav-inner">
-        <button
-          type="button"
-          className="brand"
-          onClick={() => setRoute('landing')}
-          aria-label="Kelvid Studio home"
-        >
+        <button type="button" className="brand" onClick={() => setRoute('landing')}>
           <img src="/logo.svg" alt="" width="36" height="36" />
           <div>
             <strong>Kelvid</strong>
@@ -28,7 +23,7 @@ export default function Nav() {
           </div>
         </button>
 
-        <nav className="nav-links" aria-label="Primary">
+        <div className="nav-links">
           {LINKS.map((l) => (
             <button
               key={l.id}
@@ -39,26 +34,20 @@ export default function Nav() {
               {l.label}
             </button>
           ))}
-        </nav>
+        </div>
 
         <div className="nav-right">
-          <div className={`health-pill ${health.startsWith('online') ? 'online' : 'offline'}`}>
+          <div className={`health ${health.startsWith('online') ? 'ok' : 'bad'}`}>
             <span className="dot" />
-            <span className="health-text">{health}</span>
+            {health}
           </div>
 
           {user ? (
             <div className="user-menu">
-              <div className="user-info">
-                <span className="user-name">{user.name}</span>
-                <span className="user-credits">{user.credits} credits</span>
-              </div>
-              <button type="button" className="btn-ghost sm" onClick={() => setRoute('settings')}>
-                Settings
-              </button>
-              <button type="button" className="btn-ghost sm" onClick={logout}>
-                Log out
-              </button>
+              <span className="user-name">{user.name || user.email}</span>
+              <span className="credits">{user.credits} credits</span>
+              <button type="button" className="btn-ghost sm" onClick={() => setRoute('settings')}>Settings</button>
+              <button type="button" className="btn-ghost sm" onClick={logout}>Log out</button>
             </div>
           ) : (
             <button type="button" className="btn btn-primary sm" onClick={() => setRoute('login')}>
@@ -67,6 +56,6 @@ export default function Nav() {
           )}
         </div>
       </div>
-    </header>
+    </nav>
   )
 }

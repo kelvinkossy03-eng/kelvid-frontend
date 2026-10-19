@@ -1,38 +1,31 @@
 import React from 'react'
 import { KelvidProvider, useKelvid } from './context/KelvidContext.jsx'
 import Nav from './Nav.jsx'
+import Login from './pages/Login.jsx'
+import Landing from './Landing.jsx'
 import Studio from './Studio.jsx'
 import Gallery from './Gallery.jsx'
 import Plans from './Plans.jsx'
 import Docs from './Docs.jsx'
 import Settings from './Settings.jsx'
-import ToastContainer from './ToastContainer.jsx'
 import Footer from './Footer.jsx'
-import Landing from './Landing.jsx'
-import Login from './pages/Login.jsx'
+import ToastContainer from './ToastContainer.jsx'
 
-// ---------- error boundary ----------
 class ErrorBoundary extends React.Component {
   state = { hasError: false, error: null }
   static getDerivedStateFromError(error) {
     return { hasError: true, error }
   }
-  componentDidCatch(error, errorInfo) {
-    console.error('ErrorBoundary caught:', error, errorInfo)
+  componentDidCatch(error, info) {
+    console.error('ErrorBoundary:', error, info)
   }
   render() {
     if (this.state.hasError) {
       return (
         <div className="error-screen">
           <h2>Something went wrong</h2>
-          <p>{this.state.error?.message || 'An unexpected error occurred'}</p>
-          <button
-            className="btn btn-primary"
-            onClick={() => {
-              this.setState({ hasError: false, error: null })
-              window.location.reload()
-            }}
-          >
+          <p>{this.state.error?.message || 'Unexpected error'}</p>
+          <button className="btn btn-primary" onClick={() => window.location.reload()}>
             Refresh page
           </button>
         </div>
@@ -42,31 +35,24 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-function AppRoutes() {
-  const { route, user } = useKelvid()
-
-  // Protect studio & gallery — require login
-  if ((route === 'studio' || route === 'gallery' || route === 'settings') && !user) {
-    return <Login />
-  }
+function AppContent() {
+  const { route, toasts } = useKelvid()
 
   if (route === 'login') return <Login />
 
   return (
     <div className="app">
       <Nav />
-
-      <main className="main-content">
+      <div className="page">
         {route === 'landing' && <Landing />}
         {route === 'studio' && <Studio />}
         {route === 'gallery' && <Gallery />}
         {route === 'plans' && <Plans />}
         {route === 'docs' && <Docs />}
         {route === 'settings' && <Settings />}
-      </main>
-
+      </div>
       <Footer />
-      <ToastContainer />
+      <ToastContainer toasts={toasts} />
     </div>
   )
 }
@@ -75,7 +61,7 @@ export default function App() {
   return (
     <ErrorBoundary>
       <KelvidProvider>
-        <AppRoutes />
+        <AppContent />
       </KelvidProvider>
     </ErrorBoundary>
   )
