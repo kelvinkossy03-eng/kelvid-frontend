@@ -1,8 +1,7 @@
 import React from 'react'
 import { ThemeProvider } from './context/ThemeContext.jsx'
 import { KelvidProvider, useKelvid } from './context/KelvidContext.jsx'
-import Nav from './components/Nav.jsx'
-import Footer from './components/Footer.jsx'
+import Sidebar from './components/Sidebar.jsx'
 import ToastContainer from './components/ToastContainer.jsx'
 import Login from './pages/Login.jsx'
 import Landing from './pages/Landing.jsx'
@@ -18,17 +17,15 @@ class ErrorBoundary extends React.Component {
     return { hasError: true, error }
   }
   componentDidCatch(error, info) {
-    console.error('ErrorBoundary:', error, info)
+    console.error(error, info)
   }
   render() {
     if (this.state.hasError) {
       return (
-        <div className="error-screen">
-          <h2>Something went wrong</h2>
-          <p>{this.state.error?.message || 'Unexpected error'}</p>
-          <button className="btn btn-primary" onClick={() => window.location.reload()}>
-            Refresh page
-          </button>
+        <div className="crash">
+          <h1>Something broke</h1>
+          <p>{this.state.error?.message}</p>
+          <button type="button" onClick={() => window.location.reload()}>Reload</button>
         </div>
       )
     }
@@ -36,25 +33,31 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-function AppShell() {
+function Shell() {
   const { route, toasts } = useKelvid()
 
   if (route === 'login') return <Login />
+  if (route === 'landing') {
+    return (
+      <>
+        <Landing />
+        <ToastContainer toasts={toasts} />
+      </>
+    )
+  }
 
   return (
-    <div className="app">
-      <Nav />
-      <main className="page" key={route}>
-        <div className="page-enter">
-          {route === 'landing' && <Landing />}
+    <div className="shell">
+      <Sidebar />
+      <div className="workspace">
+        <div className="workspace-inner" key={route}>
           {route === 'studio' && <Studio />}
           {route === 'gallery' && <Gallery />}
           {route === 'plans' && <Plans />}
           {route === 'docs' && <Docs />}
           {route === 'settings' && <Settings />}
         </div>
-      </main>
-      <Footer />
+      </div>
       <ToastContainer toasts={toasts} />
     </div>
   )
@@ -65,7 +68,7 @@ export default function App() {
     <ErrorBoundary>
       <ThemeProvider>
         <KelvidProvider>
-          <AppShell />
+          <Shell />
         </KelvidProvider>
       </ThemeProvider>
     </ErrorBoundary>

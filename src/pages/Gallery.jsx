@@ -1,8 +1,9 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useKelvid } from '../context/KelvidContext.jsx'
 
 export default function Gallery() {
   const { gallery, filter, setFilter, refreshGallery, refreshJobs, removeItem, setRoute, user } = useKelvid()
+  const [active, setActive] = useState(null)
 
   const shown = gallery.filter((x) => {
     const q = filter.toLowerCase()
@@ -11,62 +12,89 @@ export default function Gallery() {
 
   if (!user) {
     return (
-      <div className="locked">
-        <div className="locked-card animate-in">
-          <h2>Sign in to view your gallery</h2>
-          <button className="btn btn-primary" onClick={() => setRoute('login')}>Sign in</button>
-        </div>
+      <div className="gate">
+        <h2>Gallery is locked</h2>
+        <p>Sign in to see your archive.</p>
+        <button type="button" className="btn-main" onClick={() => setRoute('login')}>Sign in</button>
       </div>
     )
   }
 
   return (
-    <div className="page-body">
-      <header className="page-top">
+    <div className="gal">
+      <header className="gal-head">
         <div>
           <h1>Gallery</h1>
-          <p>All your generated videos</p>
+          <p>{gallery.length} clips stored</p>
         </div>
-        <div className="inline-row">
-          <input className="input-sm" value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Search by prompt…" />
-          <button className="btn-ghost" onClick={() => { refreshGallery(); refreshJobs() }}>Refresh</button>
+        <div className="gal-tools">
+          <input
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            placeholder="Search prompts…"
+          />
+          <button type="button" className="btn-ghost" onClick={() => { refreshGallery(); refreshJobs() }}>
+            Refresh
+          </button>
         </div>
       </header>
 
-      <div className="g-grid large">
-        {shown.map((x) => (
-          <div key={x.filename} className="g-card">
-            <video src={x.url} controls muted preload="metadata" />
-            <button type="button" className="g-del" onClick={() => removeItem(x.filename)}>×</button>
-            <div className="g-meta">
-              <p>{(x.prompt || '').slice(0, 90)}</p>
-              <span>{(x.created_at || '').slice(0, 10)}</span>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {shown.length === 0 && (
-        <div className="empty-state">
-          <p>{gallery.length === 0 ? 'No videos yet. Open Studio and generate your first one.' : 'No matches for your search.'}</p>
+      {shown.length === 0 ? (
+        <div className="gate">
+          <p>{gallery.length === 0 ? 'Nothing here yet. Generate from Studio.' : 'No matches.'}</p>
           {gallery.length === 0 && (
-            <button className="btn btn-primary" onClick={() => setRoute('studio')}>Open Studio</button>
+            <button type="button" className="btn-main" onClick={() => setRoute('studio')}>Go to Studio</button>
           )}
+        </div>
+      ) : (
+        <div className="gal-masonry">
+          {shown.map((x) => (
+            <article key={x.filename} className="gal-item" onClick={() => setActive(x)}>
+              <video src={x.url} muted preload="metadata" />
+              <div className="gal-item-info">
+                <p>{x.prompt || 'Untitled'}</p>
+                <span>{(x.created_at || '').slice(0, 10)}</span>
+              </div>
+              <button
+                type="button"
+                className="gal-item-del"
+                onClick={(e) => { e.stopPropagation(); removeItem(x.filename) }}
+              >
+                Delete
+              </button>
+            </article>
+          ))}
         </div>
       )}
 
       {gallery.length > 0 && (
-        <div className="danger-row">
+        <div className="gal-foot">
           <button
+            type="button"
             className="btn-ghost danger"
             onClick={() => {
-              if (window.confirm('Delete ALL videos? This cannot be undone.')) {
+              if (window.confirm('Delete every video in the gallery?')) {
                 gallery.forEach((g) => removeItem(g.filename))
               }
             }}
           >
-            Delete all videos
+            Delete all
           </button>
+        </div>
+      )}
+
+      {active && (
+        <div className="lightbox" onClick={() => setActive(null)}>
+          <div className="lightbox-card" onClick={(e) => e.stopPropagation()}>
+            <video src={active.url} controls autoPlay playsInline />
+            <div className="lightbox-meta">
+              <p>{active.prompt}</p>
+              <div className="lightbox-acts">
+                <a href={active.url} download className="btn-main">Download</a>
+                <button type="button" className="btn-ghost" onClick={() => setActive(null)}>Close</button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

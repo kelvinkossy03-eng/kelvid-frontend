@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useKelvid } from '../context/KelvidContext.jsx'
 import { IDEAS } from '../constants.js'
 import { resolveUrl } from '../api.js'
@@ -14,6 +14,9 @@ export default function Studio() {
     refreshGallery, refreshJobs, user, setRoute,
   } = useKelvid()
 
+  const [showAdv, setShowAdv] = useState(false)
+  const [showNeg, setShowNeg] = useState(false)
+
   const shown = gallery.filter((x) => {
     const q = filter.toLowerCase()
     return !q || (x.prompt || '').toLowerCase().includes(q)
@@ -21,47 +24,53 @@ export default function Studio() {
 
   if (!user) {
     return (
-      <div className="locked">
-        <div className="locked-card animate-in">
-          <h2>Sign in to use Studio</h2>
-          <p>Create a free account to generate videos and save them to your gallery.</p>
-          <button className="btn btn-primary" onClick={() => setRoute('login')}>Sign in / Create account</button>
-        </div>
+      <div className="gate">
+        <h2>Studio is locked</h2>
+        <p>Sign in to generate and save videos.</p>
+        <button type="button" className="btn-main" onClick={() => setRoute('login')}>Sign in</button>
       </div>
     )
   }
 
   return (
-    <div className="studio">
-      <aside className="studio-side">
-        <form onSubmit={submit} className="panel">
-          <div className="field-block">
-            <div className="label-row">
-              <label htmlFor="prompt">Prompt</label>
-              <span className="char-count">{prompt.length}</span>
-            </div>
+    <div className="studio-v2">
+      {/* Top command bar */}
+      <header className="stu-bar">
+        <div className="stu-bar-left">
+          <h1>Studio</h1>
+          <span className="stu-pill">{jobs.filter((j) => j.status === 'running' || j.status === 'queued').length} active</span>
+        </div>
+        <div className="stu-bar-right">
+          <button type="button" className={`stu-toggle ${showAdv ? 'on' : ''}`} onClick={() => setShowAdv((v) => !v)}>
+            Advanced
+          </button>
+        </div>
+      </header>
+
+      {/* Main canvas: prompt + stage */}
+      <div className="stu-canvas">
+        <form className="stu-composer" onSubmit={submit}>
+          <textarea
+            className="stu-prompt"
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            placeholder="Describe the shot… e.g. drone over neon city in the rain"
+            rows={3}
+          />
+
+          {showNeg && (
             <textarea
-              id="prompt"
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Describe the video you want to create..."
-              rows={4}
-            />
-            <label htmlFor="neg" className="sub-label">Negative prompt</label>
-            <textarea
-              id="neg"
+              className="stu-neg"
               value={negativePrompt}
               onChange={(e) => setNegativePrompt(e.target.value)}
-              placeholder="blurry, watermark, distorted faces..."
+              placeholder="Negative prompt — what to avoid"
               rows={2}
             />
-          </div>
+          )}
 
-          <div className="field-block">
-            <label>Model</label>
-            <div className="model-list">
-              {models.length === 0 && <span className="muted">Loading models…</span>}
-              {models.map((m) => {
+          <div className="stu-toolbar">
+            <div className="stu-models">
+              {models.slice(0, 4).map((m) => {
                 const id = typeof m === 'string' ? m : (m.id || m.model || '')
                 const label = typeof m === 'string' ? m : (m.label || m.id || id)
                 const provider = typeof m === 'string' ? 'fal-ai' : (m.provider || '')
@@ -70,138 +79,131 @@ export default function Studio() {
                   <button
                     key={id + provider}
                     type="button"
-                    className={`model-opt ${active ? 'active' : ''}`}
+                    className={`stu-model ${active ? 'on' : ''}`}
                     onClick={() => { setSelectedModel(id); setSelectedProvider(provider) }}
                   >
-                    <strong>{label.split('/').pop()}</strong>
-                    <span>{provider}</span>
+                    {label.split('/').pop()}
                   </button>
                 )
               })}
             </div>
-          </div>
 
-          <div className="field-block">
-            <label>Inspiration</label>
-            <div className="chip-row">
-              {IDEAS.map((idea, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  className={`chip ${prompt === idea ? 'active' : ''}`}
-                  onClick={() => setPrompt(idea)}
-                >
-                  {idea.slice(0, 26)}…
-                </button>
-              ))}
+            <div className="stu-actions">
+              <button type="button" className="stu-link" onClick={() => setShowNeg((v) => !v)}>
+                {showNeg ? 'Hide negative' : 'Negative'}
+              </button>
+              <button type="submit" className="btn-main" disabled={busy || !prompt.trim()}>
+                {busy ? 'Queuing…' : 'Generate'}
+              </button>
             </div>
           </div>
 
-          <details className="adv" open>
-            <summary>Advanced</summary>
-            <div className="adv-body">
-              <div>
-                <label>Duration</label>
-                <div className="chip-row">
-                  {[24, 48, 96, 192, 384].map((f) => (
-                    <button key={f} type="button" className={`chip ${frames === f ? 'active' : ''}`} onClick={() => setFrames(f)}>
-                      {Math.round(f / 24)}s
-                    </button>
-                  ))}
-                </div>
-                <input type="range" min={8} max={720} value={frames} onChange={(e) => setFrames(+e.target.value)} />
-                <span className="hint">{frames} frames · ~{Math.round(frames / 24)}s</span>
-              </div>
-              <div>
-                <label>Steps ({steps})</label>
-                <input type="range" min={5} max={80} value={steps} onChange={(e) => setSteps(+e.target.value)} />
-              </div>
-              <div>
-                <label>Guidance ({guide})</label>
-                <input type="range" min={1} max={20} step={0.5} value={guide} onChange={(e) => setGuide(+e.target.value)} />
-              </div>
-              <div>
-                <label>Seed</label>
-                <input type="text" value={seed} onChange={(e) => setSeed(e.target.value)} placeholder="blank = random" />
+          {showAdv && (
+            <div className="stu-adv">
+              <div className="stu-adv-row">
+                <label>Duration
+                  <div className="stu-seg">
+                    {[24, 48, 96, 192].map((f) => (
+                      <button key={f} type="button" className={frames === f ? 'on' : ''} onClick={() => setFrames(f)}>
+                        {Math.round(f / 24)}s
+                      </button>
+                    ))}
+                  </div>
+                </label>
+                <label>Steps
+                  <input type="range" min={5} max={80} value={steps} onChange={(e) => setSteps(+e.target.value)} />
+                  <em>{steps}</em>
+                </label>
+                <label>Guidance
+                  <input type="range" min={1} max={20} step={0.5} value={guide} onChange={(e) => setGuide(+e.target.value)} />
+                  <em>{guide}</em>
+                </label>
+                <label>Seed
+                  <input type="text" value={seed} onChange={(e) => setSeed(e.target.value)} placeholder="random" />
+                </label>
               </div>
             </div>
-          </details>
+          )}
 
-          <button type="submit" className="btn btn-primary full" disabled={busy || !prompt.trim()}>
-            {busy ? 'Generating…' : 'Generate video'}
-          </button>
-
-          {error && <div className="alert alert-error">{error}</div>}
-
-          <div className="queue-block">
-            <div className="queue-label">Live queue</div>
-            {jobs.length === 0 && <p className="muted">No jobs yet</p>}
-            {jobs.slice(0, 8).map((j) => (
-              <div key={j.job_id} className="job-row">
-                <span className={`status status-${j.status}`}>{j.status}</span>
-                <span className="job-prompt">{(j.prompt || '').slice(0, 36)}</span>
-                <div className="job-acts">
-                  {j.status === 'done' && j.url && (
-                    <button type="button" className="btn-ghost xs" onClick={() => { setVideoUrl(resolveUrl(j.url)); setVideoMeta(j.prompt) }}>Play</button>
-                  )}
-                  {j.status === 'failed' && (
-                    <button type="button" className="btn-ghost xs" onClick={() => retryJob(j.job_id)}>Retry</button>
-                  )}
-                </div>
-              </div>
+          <div className="stu-ideas">
+            {IDEAS.map((idea, i) => (
+              <button key={i} type="button" className="stu-idea" onClick={() => setPrompt(idea)}>
+                {idea.slice(0, 40)}…
+              </button>
             ))}
           </div>
-        </form>
-      </aside>
 
-      <section className="studio-main">
-        <div className="panel preview-panel">
-          <div className="panel-head">
-            <div>
-              <h2>Preview</h2>
-              <p>{videoMeta || 'Your video will appear here'}</p>
-            </div>
-            {videoUrl && <a className="btn-ghost sm" href={videoUrl} download>Download</a>}
-          </div>
+          {error && <div className="stu-error">{error}</div>}
+        </form>
+
+        {/* Preview stage */}
+        <div className="stu-stage">
           {!videoUrl ? (
-            <div className="empty-state">
-              <span className="empty-icon">▶</span>
-              <p>Generate a video to see it here</p>
+            <div className="stu-stage-empty">
+              <div className="stu-stage-mark">◎</div>
+              <p>Generated video plays here</p>
             </div>
           ) : (
-            <video key={videoUrl} src={videoUrl} controls autoPlay loop playsInline className="preview-video" />
+            <div className="stu-stage-player">
+              <video key={videoUrl} src={videoUrl} controls autoPlay loop playsInline />
+              <div className="stu-stage-meta">
+                <span>{videoMeta}</span>
+                <a href={videoUrl} download className="stu-link">Download</a>
+              </div>
+            </div>
           )}
         </div>
+      </div>
 
-        <div className="panel">
-          <div className="panel-head">
-            <div>
-              <h2>Gallery</h2>
-              <p>{shown.length} videos</p>
-            </div>
-            <div className="inline-row">
-              <input className="input-sm" value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Search…" />
-              <button type="button" className="btn-ghost sm" onClick={() => { refreshGallery(); refreshJobs() }}>↻</button>
-            </div>
+      {/* Bottom strip: queue + recent gallery */}
+      <div className="stu-strip">
+        <div className="stu-strip-col">
+          <div className="stu-strip-head">
+            <h3>Queue</h3>
+            <button type="button" className="stu-link" onClick={refreshJobs}>Refresh</button>
           </div>
-          <div className="g-grid">
-            {shown.map((x) => (
-              <div key={x.filename} className="g-card" onClick={() => { setVideoUrl(x.url); setVideoMeta(x.prompt) }}>
-                <video src={x.url} muted preload="metadata" />
-                <button type="button" className="g-del" onClick={(e) => { e.stopPropagation(); removeItem(x.filename) }}>×</button>
-                <div className="g-meta">
-                  <p>{(x.prompt || '').slice(0, 55)}</p>
-                </div>
+          <div className="stu-queue">
+            {jobs.length === 0 && <p className="stu-empty">No jobs yet</p>}
+            {jobs.slice(0, 6).map((j) => (
+              <div key={j.job_id} className="stu-qitem">
+                <span className={`stu-status ${j.status}`}>{j.status}</span>
+                <span className="stu-qtext">{(j.prompt || '').slice(0, 42)}</span>
+                {j.status === 'done' && j.url && (
+                  <button type="button" className="stu-link" onClick={() => { setVideoUrl(resolveUrl(j.url)); setVideoMeta(j.prompt) }}>Play</button>
+                )}
+                {j.status === 'failed' && (
+                  <button type="button" className="stu-link" onClick={() => retryJob(j.job_id)}>Retry</button>
+                )}
               </div>
             ))}
-            {shown.length === 0 && (
-              <div className="empty-state sm">
-                <p>No videos yet</p>
-              </div>
-            )}
           </div>
         </div>
-      </section>
+
+        <div className="stu-strip-col">
+          <div className="stu-strip-head">
+            <h3>Recent</h3>
+            <input
+              className="stu-search"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              placeholder="Filter…"
+            />
+          </div>
+          <div className="stu-thumbs">
+            {shown.slice(0, 8).map((x) => (
+              <button
+                key={x.filename}
+                type="button"
+                className="stu-thumb"
+                onClick={() => { setVideoUrl(x.url); setVideoMeta(x.prompt) }}
+              >
+                <video src={x.url} muted preload="metadata" />
+              </button>
+            ))}
+            {shown.length === 0 && <p className="stu-empty">Gallery empty</p>}
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

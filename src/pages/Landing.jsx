@@ -1,125 +1,96 @@
-import React, { useEffect, useRef } from 'react'
+import React from 'react'
 import { useKelvid } from '../context/KelvidContext.jsx'
-
-const FEATURES = [
-  { n: '01', title: 'Describe anything', body: 'A neon street in the rain. A corgi in space. Your words become the shot.' },
-  { n: '02', title: 'Full creative control', body: 'Duration, guidance, negative prompts, seeds. Not a black box.' },
-  { n: '03', title: 'Live render queue', body: 'Watch every job. Retry failures. Nothing disappears into the void.' },
-  { n: '04', title: 'Private archive', body: 'Every render stays. Search it, replay it, download it, delete it.' },
-]
-
-const STEPS = [
-  { n: '1', title: 'Write the shot', body: 'A single sentence is enough. Add negative prompts for precision.' },
-  { n: '2', title: 'Let it render', body: 'Jobs queue on cloud GPUs. You see progress the moment it starts.' },
-  { n: '3', title: 'Take the clip', body: 'It lands in your gallery. Download, share, or generate the next one.' },
-]
-
-function useReveal() {
-  const ref = useRef(null)
-  useEffect(() => {
-    const root = ref.current
-    if (!root) return
-    const els = root.querySelectorAll('[data-reveal]')
-    if (!('IntersectionObserver' in window)) {
-      els.forEach((el) => el.classList.add('revealed'))
-      return
-    }
-    const io = new IntersectionObserver((entries) => {
-      entries.forEach((e) => {
-        if (e.isIntersecting) {
-          e.target.classList.add('revealed')
-          io.unobserve(e.target)
-        }
-      })
-    }, { threshold: 0.12, rootMargin: '0px 0px -30px 0px' })
-    els.forEach((el) => io.observe(el))
-    return () => io.disconnect()
-  }, [])
-  return ref
-}
+import { useTheme } from '../context/ThemeContext.jsx'
 
 export default function Landing() {
   const { setRoute, user } = useKelvid()
-  const rootRef = useReveal()
+  const { theme, toggle } = useTheme()
 
   return (
-    <div className="landing" ref={rootRef}>
-      <section className="hero">
-        <div className="hero-copy" data-reveal>
-          <span className="eyebrow">Text to video</span>
-          <h1>
-            Write the scene.<br />
-            <span className="accent-text">Get the film.</span>
-          </h1>
-          <p className="hero-sub">
-            Kelvid turns a sentence into a finished clip. No GPU. No install.
-            Just a prompt, a queue, and a private gallery.
-          </p>
-          <div className="hero-cta">
-            {user ? (
-              <button className="btn btn-primary lg" onClick={() => setRoute('studio')}>Open Studio</button>
-            ) : (
-              <>
-                <button className="btn btn-primary lg" onClick={() => setRoute('login')}>Start free</button>
-                <button className="btn-ghost lg" onClick={() => setRoute('studio')}>See the studio</button>
-              </>
-            )}
-          </div>
-          <div className="hero-stats">
-            <div><strong>60s</strong><span>max length</span></div>
-            <div><strong>720p</strong><span>output</span></div>
-            <div><strong>65</strong><span>free credits</span></div>
-          </div>
+    <div className="lp">
+      <header className="lp-top">
+        <div className="lp-brand">
+          <img src="/logo.svg" alt="" width="32" height="32" />
+          <span>Kelvid</span>
         </div>
-        <div className="hero-panel" data-reveal data-delay="1">
-          <div className="hero-panel-inner">
-            <span className="hero-panel-label">Example prompt</span>
-            <p className="hero-panel-quote">
-              “Cinematic drone shot over a neon city at night, rain, reflections”
-            </p>
-          </div>
+        <div className="lp-actions">
+          <button type="button" className="lp-ghost" onClick={toggle}>
+            {theme === 'dark' ? 'Light' : 'Dark'}
+          </button>
+          {user ? (
+            <button type="button" className="lp-solid" onClick={() => setRoute('studio')}>Open app</button>
+          ) : (
+            <>
+              <button type="button" className="lp-ghost" onClick={() => setRoute('login')}>Sign in</button>
+              <button type="button" className="lp-solid" onClick={() => setRoute('login')}>Get started</button>
+            </>
+          )}
+        </div>
+      </header>
+
+      <section className="lp-hero">
+        <p className="lp-kicker">Text → video · cloud render</p>
+        <h1>
+          From a sentence<br />
+          to a finished shot.
+        </h1>
+        <p className="lp-lead">
+          Type what you see. Kelvid queues it on GPU, streams status live,
+          and stores every clip in your private gallery.
+        </p>
+        <div className="lp-cta-row">
+          <button type="button" className="lp-solid big" onClick={() => setRoute(user ? 'studio' : 'login')}>
+            {user ? 'Continue to Studio' : 'Start generating — free'}
+          </button>
+          <button type="button" className="lp-ghost big" onClick={() => setRoute('studio')}>
+            Peek at Studio
+          </button>
         </div>
       </section>
 
-      <section className="section">
-        <div className="section-head" data-reveal>
-          <span className="eyebrow">Process</span>
-          <h2>Three steps. Nothing extra.</h2>
-        </div>
-        <div className="steps">
-          {STEPS.map((s, i) => (
-            <div key={s.n} className="step" data-reveal data-delay={i}>
-              <span className="step-n">{s.n}</span>
-              <h3>{s.title}</h3>
-              <p>{s.body}</p>
+      <section className="lp-stage">
+        <div className="lp-stage-frame">
+          <div className="lp-stage-bar">
+            <span /><span /><span />
+            <em>studio.kelvid.app</em>
+          </div>
+          <div className="lp-stage-body">
+            <div className="lp-fake-prompt">
+              Cinematic drone shot over a neon city at night, rain on asphalt, reflections…
             </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="section">
-        <div className="section-head" data-reveal>
-          <span className="eyebrow">Capabilities</span>
-          <h2>Built for people who care about the shot.</h2>
-        </div>
-        <div className="feature-grid">
-          {FEATURES.map((f, i) => (
-            <div key={f.title} className="feature" data-reveal data-delay={i % 2}>
-              <span className="feature-n">{f.n}</span>
-              <h3>{f.title}</h3>
-              <p>{f.body}</p>
+            <div className="lp-fake-preview">
+              <div className="lp-fake-play">▶</div>
+              <span>Preview · 8s · Wan2.2</span>
             </div>
-          ))}
+            <div className="lp-fake-jobs">
+              <div className="lp-job done"><i /> done · neon city</div>
+              <div className="lp-job run"><i /> running · corgi astronaut</div>
+              <div className="lp-job queue"><i /> queued · jungle waterfall</div>
+            </div>
+          </div>
         </div>
       </section>
 
-      <section className="cta-block" data-reveal>
-        <h2>Your first clips are free.</h2>
-        <p>65 credits. No card. No trial games.</p>
-        <button className="btn btn-primary lg" onClick={() => setRoute(user ? 'studio' : 'login')}>
-          {user ? 'Open Studio' : 'Create account'}
-        </button>
+      <section className="lp-grid">
+        <article>
+          <h3>Prompt → queue → clip</h3>
+          <p>No install. No GPU on your machine. Jobs run in the cloud and update live.</p>
+        </article>
+        <article>
+          <h3>Controls that matter</h3>
+          <p>Frames, steps, guidance, negative prompts, seeds. Real parameters, not a toy slider.</p>
+        </article>
+        <article>
+          <h3>Your archive</h3>
+          <p>Every render is stored, searchable, downloadable. Delete when you are done.</p>
+        </article>
       </section>
+
+      <footer className="lp-foot">
+        <span>Kelvid Studio</span>
+        <button type="button" onClick={() => setRoute('docs')}>Docs</button>
+        <button type="button" onClick={() => setRoute('plans')}>Pricing</button>
+      </footer>
     </div>
   )
 }
