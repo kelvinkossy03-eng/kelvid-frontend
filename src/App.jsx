@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { apiFetch, resolveUrl, setApiKey } from './api.js'
+import React from 'react'
+import { KelvidProvider, useKelvid } from './context/KelvidContext.jsx'
 import Nav from './Nav.jsx'
 import Studio from './Studio.jsx'
 import Gallery from './Gallery.jsx'
@@ -9,29 +9,29 @@ import Settings from './Settings.jsx'
 import ToastContainer from './ToastContainer.jsx'
 import Footer from './Footer.jsx'
 import Landing from './Landing.jsx'
+import Login from './pages/Login.jsx'
 
 // ---------- error boundary ----------
 class ErrorBoundary extends React.Component {
-  state = { hasError: false, error: null, errorInfo: null }
+  state = { hasError: false, error: null }
   static getDerivedStateFromError(error) {
     return { hasError: true, error }
   }
   componentDidCatch(error, errorInfo) {
-    this.setState({ hasError: true, errorInfo })
     console.error('ErrorBoundary caught:', error, errorInfo)
   }
   render() {
     if (this.state.hasError) {
       return (
-        <div className="wrap" style={{ padding: 40, textAlign: 'center', color: 'var(--text)' }}>
+        <div className="error-screen">
           <h2>Something went wrong</h2>
           <p>{this.state.error?.message || 'An unexpected error occurred'}</p>
           <button
+            className="btn btn-primary"
             onClick={() => {
-              this.setState({ hasError: false, error: null, errorInfo: null })
+              this.setState({ hasError: false, error: null })
               window.location.reload()
             }}
-            className="btn btn-primary"
           >
             Refresh page
           </button>
@@ -42,249 +42,41 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-// ---------- polling hook ----------
-function usePollJob(onDone, onError) {
-  const polling = useRef(new Set())
-  const poll = useCallback(async (id) => {
-    if (polling.current.has(id)) return
-    polling.current.add(id)
-    const t0 = Date.now()
-    try {
-      for (;;) {
-        await new Promise((r) => setTimeout(r, 4000))
-        let j
-        try { j = await apiFetch(`/api/jobs/${id}`) } catch (err) {
-          if (onError) onError(`Poll failed: ${err.message}`)
-          break
-        }
-        onDone(j, Math.round((Date.now() - t0) / 1000))
-        if (j.status === 'done' || j.status === 'failed') break
-      }
-    } finally {
-      polling.current.delete(id)
-    }
-  }, [onDone, onError])
-  return poll
+function AppRoutes() {
+  const { route, user } = useKelvid()
+
+  // Protect studio & gallery — require login
+  if ((route === 'studio' || route === 'gallery' || route === 'settings') && !user) {
+    return <Login />
+  }
+
+  if (route === 'login') return <Login />
+
+  return (
+    <div className="app">
+      <Nav />
+
+      <main className="main-content">
+        {route === 'landing' && <Landing />}
+        {route === 'studio' && <Studio />}
+        {route === 'gallery' && <Gallery />}
+        {route === 'plans' && <Plans />}
+        {route === 'docs' && <Docs />}
+        {route === 'settings' && <Settings />}
+      </main>
+
+      <Footer />
+      <ToastContainer />
+    </div>
+  )
 }
 
 export default function App() {
-  // API key (backend auth) - remembered across reloads
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem('kelvid-api-key') || '')
-  const [route, setRoute] = useState('landing')
-  const [prompt, setPrompt] = useState('')
-  const [negativePrompt, setNegativePrompt] = useState('')
-  const [models, setModels] = useState([])
-  const [selectedModel, setSelectedModel] = useState('')
-  const [selectedProvider, setSelectedProvider] = useState('')
-  const [frames, setFrames] = useState(48)
-  const [steps, setSteps] = useState(30)
-  const [guide, setGuide] = useState(7.5)
-  const [seed, setSeed] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-  const [jobs, setJobs] = useState([])
-  const [gallery, setGallery] = useState([])
-  const [filter, setFilter] = useState('')
-  const [videoUrl, setVideoUrl] = useState('')
-  const [videoMeta, setVideoMeta] = useState('')
-  const [toasts, setToasts] = useState([])
-  const [health, setHealth] = useState('connecting...')
-
-  useEffect(() => {
-    localStorage.setItem('kelvid-api-key', apiKey)
-  }, [apiKey])
-
-  const toast = useCallback((msg) => {
-    const id = Math.random().toString(36).slice(2)
-    setToasts((t) => [...t, { id, msg }])
-    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 4500)
-  }, [])
-
-  // ---- public backend data (GET endpoints, no auth gate) ----
-  useEffect(() => {
-    apiFetch('/api/health').then((d) => {
-      if (!d) return
-      setHealth(d.status === 'ok' ? `online v${d.version} | ${d.active_jobs} active` : d.status)
-    }).catch(() => setHealth('offline'))
-    apiFetch('/api/models').then((d) => {
-      if (!d) return
-      setModels(d.models || [])
-      if (d.default) setSelectedModel(d.default)
-      if (d.provider) setSelectedProvider(d.provider)
-    }).catch(() => toast('Failed to load models'))
-  }, [])
-
-  const refreshJobs = useCallback(async () => {
-    try { const d = await apiFetch('/api/jobs'); setJobs(d.jobs || []) }
-    catch (err) { toast(err.message || 'Failed to load jobs') }
-  }, [toast])
-
-  const refreshGallery = useCallback(async () => {
-    try {
-      const d = await apiFetch('/api/gallery')
-      setGallery((d.items || []).map((x) => ({ ...x, url: resolveUrl(x.url) })))
-    } catch (err) { toast(err.message || 'Failed to load gallery') }
-  }, [toast])
-
-  useEffect(() => {
-    void refreshJobs().catch(() => toast('Failed to load jobs'))
-    void refreshGallery().catch(() => toast('Failed to load gallery'))
-    const h = setInterval(() => {
-      apiFetch('/api/health').then((d) => {
-        if (!d) return
-        setHealth(d.status === 'ok' ? `online v${d.version} | ${d.active_jobs} active` : d.status)
-      }).catch(() => setHealth('cannot reach backend'))
-    }, 15000)
-    return () => clearInterval(h)
-  }, [refreshJobs, refreshGallery, toast])
-
-  const handleJob = useCallback((j, elapsed) => {
-    if (!j) return
-    const url = resolveUrl(j.url)
-    setVideoMeta(`Job ${j.job_id.slice(0, 6)} | ${j.status} | ${elapsed}s`)
-    refreshJobs()
-    if (j.status === 'done') {
-      setVideoUrl(url)
-      setVideoMeta(`Done in ${elapsed}s | ${j.model}`)
-      toast('Video ready!')
-      refreshGallery()
-    }
-    if (j.status === 'failed') setError('Failed: ' + (j.error || 'unknown'))
-  }, [refreshJobs, refreshGallery, toast])
-
-  const poll = usePollJob(handleJob, toast)
-
-  const submit = useCallback(async (e) => {
-    e.preventDefault()
-    if (!prompt.trim()) return
-    setBusy(true)
-    setError('')
-    try {
-      const body = {
-        prompt,
-        negative_prompt: negativePrompt || undefined,
-        num_frames: frames,
-        num_inference_steps: steps,
-        guidance_scale: guide,
-      }
-      if (selectedModel) body.model = selectedModel
-      if (selectedProvider) body.provider = selectedProvider
-      if (seed) body.seed = parseInt(seed, 10)
-      const d = await apiFetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      })
-      if (d.job_id) {
-        poll(d.job_id)
-        setVideoMeta(`Queued | ${d.job_id.slice(0, 6)}`)
-      }
-      setBusy(false)
-    } catch (err) {
-      const msg = err.message || 'Generation failed'
-      setError(msg)
-      toast(msg)
-      setBusy(false)
-    }
-  }, [prompt, negativePrompt, selectedModel, selectedProvider, frames, steps, guide, seed, apiKey, poll, toast])
-
-  const retryJob = useCallback(async (id) => {
-    try {
-      const headers = {}
-      if (apiKey) headers['X-API-Key'] = apiKey
-      const d = await apiFetch('/api/jobs/' + id + '/retry', { method: 'POST', headers })
-      if (d.job_id) poll(d.job_id)
-    } catch (err) {
-      const msg = err.message || 'Retry failed'
-      setError(msg)
-      toast(msg)
-    }
-  }, [apiKey, toast, poll])
-
-  const removeItem = useCallback(async (filename) => {
-    try {
-      const headers = {}
-      if (apiKey) headers['X-API-Key'] = apiKey
-      await apiFetch('/api/gallery/' + filename, { method: 'DELETE', headers })
-      refreshGallery()
-      toast('Deleted')
-    } catch (err) {
-      const msg = err.message || 'Delete failed'
-      setError(msg)
-      toast(msg)
-    }
-  }, [apiKey, refreshGallery, toast])
-
   return (
     <ErrorBoundary>
-      <div className="wrap">
-        <Nav route={route} setRoute={setRoute} apiKey={apiKey} setApiKey={setApiKey} />
-
-        {route === 'landing' && <Landing setRoute={setRoute} />}
-
-        {route === 'studio' && (
-          <Studio
-            prompt={prompt}
-            setPrompt={setPrompt}
-            negativePrompt={negativePrompt}
-            setNegativePrompt={setNegativePrompt}
-            models={models}
-            setModels={setModels}
-            selectedModel={selectedModel}
-            setSelectedModel={setSelectedModel}
-            selectedProvider={selectedProvider}
-            setSelectedProvider={setSelectedProvider}
-            frames={frames}
-            setFrames={setFrames}
-            steps={steps}
-            setSteps={setSteps}
-            guide={guide}
-            setGuide={setGuide}
-            seed={seed}
-            setSeed={setSeed}
-            apiKey={apiKey}
-            setApiKey={setApiKey}
-            busy={busy}
-            error={error}
-            submit={submit}
-            retryJob={retryJob}
-            removeItem={removeItem}
-            refreshGallery={refreshGallery}
-            refreshJobs={refreshJobs}
-            poll={poll}
-            jobs={jobs}
-            gallery={gallery}
-            filter={filter}
-            setFilter={setFilter}
-            videoUrl={videoUrl}
-            setVideoUrl={setVideoUrl}
-            videoMeta={videoMeta}
-            setVideoMeta={setVideoMeta}
-          />
-        )}
-
-        {route === 'gallery' && (
-          <Gallery
-            shown={gallery.filter((x) => {
-              const q = filter.toLowerCase()
-              return !q || (x.prompt || '').toLowerCase().includes(q)
-            })}
-            gallery={gallery}
-            filter={filter}
-            setFilter={setFilter}
-            refreshGallery={refreshGallery}
-            refreshJobs={refreshJobs}
-            removeItem={removeItem}
-          />
-        )}
-
-        {route === 'plans' && <Plans />}
-        {route === 'docs' && <Docs />}
-        {route === 'settings' && <Settings apiKey={apiKey} setApiKey={setApiKey} health={health} />}
-
-        <ToastContainer toasts={toasts} />
-        <Footer setRoute={setRoute} />
-      </div>
+      <KelvidProvider>
+        <AppRoutes />
+      </KelvidProvider>
     </ErrorBoundary>
   )
 }
