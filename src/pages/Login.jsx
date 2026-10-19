@@ -3,7 +3,7 @@ import { useKelvid } from '../context/KelvidContext.jsx'
 
 export default function Login() {
   const { login, setRoute } = useKelvid()
-  const [mode, setMode] = useState('login') // 'login' | 'signup'
+  const [mode, setMode] = useState('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
@@ -22,11 +22,10 @@ export default function Login() {
       return
     }
     setLoading(true)
-    // Mock auth for now — stores user locally
     setTimeout(() => {
       login(email.trim().toLowerCase(), name.trim())
       setLoading(false)
-    }, 600)
+    }, 500)
   }
 
   return (
@@ -39,18 +38,10 @@ export default function Login() {
         </div>
 
         <div className="auth-tabs">
-          <button
-            type="button"
-            className={mode === 'login' ? 'active' : ''}
-            onClick={() => { setMode('login'); setErr('') }}
-          >
+          <button type="button" className={mode === 'login' ? 'active' : ''} onClick={() => { setMode('login'); setErr('') }}>
             Sign in
           </button>
-          <button
-            type="button"
-            className={mode === 'signup' ? 'active' : ''}
-            onClick={() => { setMode('signup'); setErr('') }}
-          >
+          <button type="button" className={mode === 'signup' ? 'active' : ''} onClick={() => { setMode('signup'); setErr('') }}>
             Create account
           </button>
         </div>
@@ -59,41 +50,18 @@ export default function Login() {
           {mode === 'signup' && (
             <div className="field">
               <label htmlFor="name">Name</label>
-              <input
-                id="name"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Your name"
-                autoComplete="name"
-              />
+              <input id="name" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" autoComplete="name" />
             </div>
           )}
 
           <div className="field">
             <label htmlFor="email">Email</label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              autoComplete="email"
-              required
-            />
+            <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" required />
           </div>
 
           <div className="field">
             <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-              required
-            />
+            <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required />
           </div>
 
           {err && <div className="auth-error">{err}</div>}

@@ -62,7 +62,6 @@ export function KelvidProvider({ children }) {
     setGlobalApiKey(key)
   }, [])
 
-  // Keep global API key in sync
   useEffect(() => {
     setGlobalApiKey(apiKey)
   }, [apiKey])
@@ -118,18 +117,14 @@ export function KelvidProvider({ children }) {
     try {
       const d = await apiFetch('/api/jobs')
       setJobs(d.jobs || [])
-    } catch {
-      // silent
-    }
+    } catch {}
   }, [])
 
   const refreshGallery = useCallback(async () => {
     try {
       const d = await apiFetch('/api/gallery')
       setGallery((d.items || []).map((x) => ({ ...x, url: resolveUrl(x.url) })))
-    } catch {
-      // silent
-    }
+    } catch {}
   }, [])
 
   // ---- Initial load ----
@@ -222,12 +217,9 @@ export function KelvidProvider({ children }) {
   }, [refreshGallery, toast])
 
   const value = {
-    // auth
     user, login, logout,
     apiKey, setApiKey,
-    // routing
     route, setRoute,
-    // generation
     prompt, setPrompt,
     negativePrompt, setNegativePrompt,
     models, selectedModel, setSelectedModel,
@@ -235,11 +227,9 @@ export function KelvidProvider({ children }) {
     frames, setFrames, steps, setSteps, guide, setGuide, seed, setSeed,
     busy, error, setError,
     submit, retryJob, removeItem,
-    // data
     jobs, gallery, filter, setFilter,
     videoUrl, setVideoUrl, videoMeta, setVideoMeta,
     refreshJobs, refreshGallery,
-    // ui
     toasts, toast, health,
   }
 
