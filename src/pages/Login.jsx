@@ -1,14 +1,21 @@
 import React, { useState } from 'react'
 import { useKelvid } from '../context/KelvidContext.jsx'
 
+const ico = { width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.9, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true }
+
 export default function Login() {
   const { login, setRoute } = useKelvid()
   const [mode, setMode] = useState('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
+  const [showPw, setShowPw] = useState(false)
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState('')
+
+  const signup = mode === 'signup'
+
+  const switchMode = (m) => { setMode(m); setErr('') }
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -17,7 +24,7 @@ export default function Login() {
       setErr('Email and password required')
       return
     }
-    if (mode === 'signup' && password.length < 6) {
+    if (signup && password.length < 6) {
       setErr('Password must be at least 6 characters')
       return
     }
@@ -31,43 +38,70 @@ export default function Login() {
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <div className="auth-brand">
-          <img src="/logo.svg" alt="" width="40" height="40" />
-          <h1>Kelvid</h1>
-          <p>Sign in to generate</p>
+        <button type="button" className="auth-back rise" onClick={() => setRoute('landing')}>
+          <svg {...ico} width="18" height="18"><path d="M15 5l-7 7 7 7" /></svg>
+          Home
+        </button>
+
+        <div className="auth-brand rise"><span className="wordmark">Kelvid</span></div>
+        <h1 className="rise d1">{signup ? 'Create your account' : 'Welcome back'}</h1>
+        <p className="auth-sub rise d1">
+          {signup ? 'Make your first video in under a minute.' : 'Sign in to pick up where you left off.'}
+        </p>
+
+        <div className="auth-tabs rise d2" role="tablist">
+          <button type="button" role="tab" aria-selected={!signup} className={!signup ? 'active' : ''} onClick={() => switchMode('login')}>Sign in</button>
+          <button type="button" role="tab" aria-selected={signup} className={signup ? 'active' : ''} onClick={() => switchMode('signup')}>Sign up</button>
         </div>
-        <div className="auth-tabs">
-          <button type="button" className={mode === 'login' ? 'active' : ''} onClick={() => { setMode('login'); setErr('') }}>Sign in</button>
-          <button type="button" className={mode === 'signup' ? 'active' : ''} onClick={() => { setMode('signup'); setErr('') }}>Sign up</button>
-        </div>
-        <form className="auth-form" onSubmit={handleSubmit}>
-          {mode === 'signup' && (
-            <div className="field">
+
+        <form className="auth-form rise d3" onSubmit={handleSubmit}>
+          {signup && (
+            <div className="auth-field glow-field">
+              <svg {...ico}><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7" /></svg>
               <label htmlFor="name">Name</label>
-              <input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
+              <input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" autoComplete="name" />
             </div>
           )}
-          <div className="field">
+          <div className="auth-field glow-field">
+            <svg {...ico}><rect x="3" y="5" width="18" height="14" rx="3" /><path d="M3.5 7l8.5 6 8.5-6" /></svg>
             <label htmlFor="email">Email</label>
-            <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" required />
+            <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email address" autoComplete="email" required />
           </div>
-          <div className="field">
+          <div className="auth-field glow-field">
+            <svg {...ico}><rect x="4" y="10" width="16" height="11" rx="3" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
             <label htmlFor="password">Password</label>
-            <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required />
+            <input
+              id="password"
+              type={showPw ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              autoComplete={signup ? 'new-password' : 'current-password'}
+              required
+            />
+            <button type="button" className="eye" onClick={() => setShowPw((v) => !v)} aria-label={showPw ? 'Hide password' : 'Show password'}>
+              {showPw ? (
+                <svg {...ico}><path d="M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.1 3.9M6.6 6.6A17 17 0 0 0 2 12s3.6 7 10 7a9.7 9.7 0 0 0 4.2-.9M9.9 9.9a3 3 0 0 0 4.2 4.2" /></svg>
+              ) : (
+                <svg {...ico}><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></svg>
+              )}
+            </button>
           </div>
-          {err && <div className="auth-error">{err}</div>}
-          <button type="submit" className="btn-main auth-submit" disabled={loading}>
-            {loading ? '…' : mode === 'login' ? 'Sign in' : 'Create account'}
+
+          {err && <div className="auth-error" role="alert">{err}</div>}
+
+          <button type="submit" className="btn-main cta auth-submit" disabled={loading}>
+            {loading ? '…' : signup ? 'Create account' : 'Sign in'}
           </button>
         </form>
-        <p className="auth-note">
-          {mode === 'login' ? (
-            <>No account? <button type="button" onClick={() => setMode('signup')}>Sign up</button></>
+
+        <p className="auth-note rise d4">
+          {signup ? (
+            <>Have an account? <button type="button" onClick={() => switchMode('login')}>Sign in</button></>
           ) : (
-            <>Have an account? <button type="button" onClick={() => setMode('login')}>Sign in</button></>
+            <>No account? <button type="button" onClick={() => switchMode('signup')}>Sign up</button></>
           )}
         </p>
-        <button type="button" className="auth-back" onClick={() => setRoute('landing')}>← Home</button>
       </div>
     </div>
   )

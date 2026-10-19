@@ -33,13 +33,22 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+function Aurora() {
+  return (
+    <div className="aurora" aria-hidden="true">
+      <i /><i />
+    </div>
+  )
+}
+
 function Shell() {
   const { route, toasts } = useKelvid()
 
-  if (route === 'login') return <Login />
+  if (route === 'login') return <><Aurora /><Login /></>
   if (route === 'landing') {
     return (
       <>
+        <Aurora />
         <Landing />
         <ToastContainer toasts={toasts} />
       </>
@@ -47,6 +56,8 @@ function Shell() {
   }
 
   return (
+    <>
+    <Aurora />
     <div className="shell">
       <Sidebar />
       <div className="workspace">
@@ -60,6 +71,7 @@ function Shell() {
       </div>
       <ToastContainer toasts={toasts} />
     </div>
+    </>
   )
 }
 

@@ -30,6 +30,7 @@ export function KelvidProvider({ children }) {
   const [guide, setGuide] = useState(7.5)
   const [seed, setSeed] = useState('')
   const [busy, setBusy] = useState(false)
+  const [rendering, setRendering] = useState(false)
   const [error, setError] = useState('')
   const [jobs, setJobs] = useState([])
   const [gallery, setGallery] = useState([])
@@ -86,6 +87,7 @@ export function KelvidProvider({ children }) {
   const pollJob = useCallback(async (id) => {
     if (polling.current.has(id)) return
     polling.current.add(id)
+    setRendering(true)
     const t0 = Date.now()
     try {
       for (;;) {
@@ -117,6 +119,7 @@ export function KelvidProvider({ children }) {
       }
     } finally {
       polling.current.delete(id)
+      setRendering(polling.current.size > 0)
     }
   }, [toast, refreshGallery, refreshJobs])
 
@@ -174,6 +177,7 @@ export function KelvidProvider({ children }) {
       })
 
       if (d.job_id) {
+        setVideoUrl('')
         setVideoMeta(`Queued · ${d.job_id.slice(0, 6)}`)
         pollJob(d.job_id)
         toast('Job queued', 'info')
@@ -216,7 +220,7 @@ export function KelvidProvider({ children }) {
     models, selectedModel, setSelectedModel,
     selectedProvider, setSelectedProvider,
     frames, setFrames, steps, setSteps, guide, setGuide, seed, setSeed,
-    busy, error, setError,
+    busy, rendering, error, setError,
     submit, retryJob, removeItem,
     jobs, gallery, filter, setFilter,
     videoUrl, setVideoUrl, videoMeta, setVideoMeta,
