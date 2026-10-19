@@ -25,16 +25,16 @@ export default function Login() {
     setTimeout(() => {
       login(email.trim().toLowerCase(), name.trim())
       setLoading(false)
-    }, 500)
+    }, 450)
   }
 
   return (
     <div className="auth-page">
-      <div className="auth-card">
+      <div className="auth-card animate-in">
         <div className="auth-brand">
-          <img src="/logo.svg" alt="Kelvid" width="48" height="48" />
+          <img src="/logo.svg" alt="Kelvid" width="44" height="44" />
           <h1>Kelvid Studio</h1>
-          <p>Cinematic AI video generation</p>
+          <p>Cinematic AI video</p>
         </div>
 
         <div className="auth-tabs">
@@ -53,20 +53,16 @@ export default function Login() {
               <input id="name" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" autoComplete="name" />
             </div>
           )}
-
           <div className="field">
             <label htmlFor="email">Email</label>
             <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" required />
           </div>
-
           <div className="field">
             <label htmlFor="password">Password</label>
             <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required />
           </div>
-
           {err && <div className="auth-error">{err}</div>}
-
-          <button type="submit" className="btn-auth" disabled={loading}>
+          <button type="submit" className="btn btn-primary auth-submit" disabled={loading}>
             {loading ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account'}
           </button>
         </form>
@@ -79,7 +75,7 @@ export default function Login() {
           )}
         </p>
 
-        <button type="button" className="auth-guest" onClick={() => setRoute('landing')}>
+        <button type="button" className="auth-back" onClick={() => setRoute('landing')}>
           ← Back to home
         </button>
       </div>
