@@ -1,22 +1,22 @@
 import React from 'react'
+import { useKelvid } from './context/KelvidContext.jsx'
 import { API_BASE } from './api.js'
 
-export default function Footer({ setRoute }) {
+export default function Footer() {
+  const { setRoute } = useKelvid()
+
   return (
-    <footer>
-      <div>
-        <strong>Kelvid Studio</strong> | React + FastAPI + Hugging Face | API: {API_BASE || 'same-origin'}
-      </div>
-      <div className="gap-8 px-sm">
-        <span>Terms</span>
-        <span>Privacy</span>
-        <span>Support: help@kelvid.studio</span>
-        <button type="button" className="btn-ghost px-sm" onClick={() => setRoute('docs')}>
-          Docs
-        </button>
-        <button type="button" className="btn-ghost px-sm" onClick={() => setRoute('plans')}>
-          Pricing
-        </button>
+    <footer className="footer">
+      <div className="footer-inner">
+        <div className="footer-brand">
+          <strong>Kelvid Studio</strong>
+          <span>React · FastAPI · Hugging Face</span>
+        </div>
+        <div className="footer-links">
+          <button type="button" onClick={() => setRoute('docs')}>Docs</button>
+          <button type="button" onClick={() => setRoute('plans')}>Pricing</button>
+          <span>API: {API_BASE || 'same-origin'}</span>
+        </div>
       </div>
     </footer>
   )

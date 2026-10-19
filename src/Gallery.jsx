@@ -1,75 +1,103 @@
 import React from 'react'
+import { useKelvid } from './context/KelvidContext.jsx'
 
-export default function Gallery({ shown, gallery, filter, setFilter, refreshGallery, refreshJobs, removeItem }) {
+export default function Gallery() {
+  const {
+    gallery, filter, setFilter,
+    refreshGallery, refreshJobs, removeItem,
+    setVideoUrl, setVideoMeta, setRoute,
+  } = useKelvid()
+
+  const shown = gallery.filter((x) => {
+    const q = filter.toLowerCase()
+    return !q || (x.prompt || '').toLowerCase().includes(q)
+  })
+
   return (
-    <>
-      <div className="page-hero">
-        <h1>Gallery</h1>
-        <p>Every render is saved here. Search by prompt, click a video to play it, or delete what you no longer need.</p>
-      </div>
-
-      <div className="card-header">
+    <div className="page">
+      <div className="page-header">
         <div>
-          <h2>{shown.length} videos</h2>
-          <div className="card-sub">{gallery.length === 0 ? 'No renders yet — your archive fills up as you generate.' : `${gallery.length} total in your archive`}</div>
+          <h1>Gallery</h1>
+          <p>All your generated videos in one place</p>
         </div>
-        <div className="gap-8">
+        <div className="page-actions">
           <input
-            className="gallery-search"
+            className="search"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            placeholder="Search gallery by prompt..."
-            aria-label="Search gallery by prompt"
+            placeholder="Search by prompt…"
           />
-          <button type="button" className="btn-ghost" onClick={() => { refreshGallery(); refreshJobs() }}>Refresh</button>
-        </div>
-      </div>
-
-      <div className="gallery-grid">
-        {shown.map((x) => (
-          <div className="gallery-item" key={x.filename}>
-            <video src={x.url} controls muted preload="metadata" />
-            <button
-              type="button"
-              className="gallery-delete"
-              title="Delete"
-              onClick={(e) => { e.stopPropagation(); removeItem(x.filename) }}
-            >
-              ✖
-            </button>
-            <div className="gallery-info">
-              <div className="gallery-prompt">{x.prompt ? x.prompt.slice(0, 120) : ''}</div>
-              <div className="gallery-meta">
-                {(typeof x.model === 'string' ? x.model : (x.model && x.model.id) || '').split('/').pop()} | {(x.created_at || '').slice(0, 10)}
-              </div>
-            </div>
-          </div>
-        ))}
-        {gallery.length > 0 && shown.length === 0 && (
-          <div className="gallery-empty">
-            <span className="big">🔍</span>
-            <p>No videos match "{filter}". Clear the search to see everything.</p>
-          </div>
-        )}
-        {gallery.length === 0 && (
-          <div className="gallery-empty">
-            <span className="big">📁</span>
-            <p>No videos yet. Open Studio and generate your first clip — it will appear here automatically.</p>
-          </div>
-        )}
-      </div>
-
-      {gallery.length > 0 && (
-        <div style={{ marginTop: 16 }}>
           <button
             type="button"
             className="btn-ghost"
-            onClick={() => { if (window.confirm('Delete all gallery videos?')) { gallery.forEach((g) => removeItem(g.filename)) } }}
+            onClick={() => { refreshGallery(); refreshJobs() }}
           >
-            Delete all videos
+            Refresh
+          </button>
+          <button type="button" className="btn btn-primary" onClick={() => setRoute('studio')}>
+            + New video
           </button>
         </div>
+      </div>
+
+      {shown.length === 0 ? (
+        <div className="empty-state large">
+          <span className="empty-icon">📁</span>
+          <h3>{gallery.length === 0 ? 'No videos yet' : 'No matches found'}</h3>
+          <p>
+            {gallery.length === 0
+              ? 'Open Studio and generate your first clip.'
+              : `Nothing matches "${filter}".`}
+          </p>
+          {gallery.length === 0 && (
+            <button type="button" className="btn btn-primary" onClick={() => setRoute('studio')}>
+              Go to Studio
+            </button>
+          )}
+        </div>
+      ) : (
+        <>
+          <div className="gallery-grid large">
+            {shown.map((x) => (
+              <div className="g-item" key={x.filename}>
+                <video src={x.url} controls muted preload="metadata" />
+                <button
+                  className="g-delete"
+                  type="button"
+                  onClick={() => removeItem(x.filename)}
+                >
+                  ✕
+                </button>
+                <div className="g-info">
+                  <p>{(x.prompt || '').slice(0, 100)}</p>
+                  <span>
+                    {(typeof x.model === 'string' ? x.model : x.model?.id || '')
+                      .split('/')
+                      .pop()}{' '}
+                    · {(x.created_at || '').slice(0, 10)}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {gallery.length > 0 && (
+            <div className="danger-zone">
+              <button
+                type="button"
+                className="btn-ghost danger"
+                onClick={() => {
+                  if (window.confirm('Delete all videos? This cannot be undone.')) {
+                    gallery.forEach((g) => removeItem(g.filename))
+                  }
+                }}
+              >
+                Delete all videos
+              </button>
+            </div>
+          )}
+        </>
       )}
-    </>
+    </div>
   )
 }
