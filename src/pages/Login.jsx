@@ -14,7 +14,7 @@ export default function Login() {
     e.preventDefault()
     setErr('')
     if (!email.trim() || !password.trim()) {
-      setErr('Email and password are required')
+      setErr('Email and password required')
       return
     }
     if (mode === 'signup' && password.length < 6) {
@@ -25,59 +25,49 @@ export default function Login() {
     setTimeout(() => {
       login(email.trim().toLowerCase(), name.trim())
       setLoading(false)
-    }, 450)
+    }, 400)
   }
 
   return (
     <div className="auth-page">
-      <div className="auth-card animate-in">
+      <div className="auth-card">
         <div className="auth-brand">
-          <img src="/logo.svg" alt="Kelvid" width="44" height="44" />
-          <h1>Kelvid Studio</h1>
-          <p>Cinematic AI video</p>
+          <img src="/logo.svg" alt="" width="40" height="40" />
+          <h1>Kelvid</h1>
+          <p>Sign in to generate</p>
         </div>
-
         <div className="auth-tabs">
-          <button type="button" className={mode === 'login' ? 'active' : ''} onClick={() => { setMode('login'); setErr('') }}>
-            Sign in
-          </button>
-          <button type="button" className={mode === 'signup' ? 'active' : ''} onClick={() => { setMode('signup'); setErr('') }}>
-            Create account
-          </button>
+          <button type="button" className={mode === 'login' ? 'active' : ''} onClick={() => { setMode('login'); setErr('') }}>Sign in</button>
+          <button type="button" className={mode === 'signup' ? 'active' : ''} onClick={() => { setMode('signup'); setErr('') }}>Sign up</button>
         </div>
-
-        <form onSubmit={handleSubmit} className="auth-form">
+        <form className="auth-form" onSubmit={handleSubmit}>
           {mode === 'signup' && (
             <div className="field">
               <label htmlFor="name">Name</label>
-              <input id="name" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" autoComplete="name" />
+              <input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
             </div>
           )}
           <div className="field">
             <label htmlFor="email">Email</label>
-            <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" required />
+            <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" required />
           </div>
           <div className="field">
             <label htmlFor="password">Password</label>
-            <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required />
+            <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required />
           </div>
           {err && <div className="auth-error">{err}</div>}
-          <button type="submit" className="btn btn-primary auth-submit" disabled={loading}>
-            {loading ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account'}
+          <button type="submit" className="btn-main auth-submit" disabled={loading}>
+            {loading ? '…' : mode === 'login' ? 'Sign in' : 'Create account'}
           </button>
         </form>
-
         <p className="auth-note">
           {mode === 'login' ? (
-            <>No account? <button type="button" onClick={() => setMode('signup')}>Create one</button></>
+            <>No account? <button type="button" onClick={() => setMode('signup')}>Sign up</button></>
           ) : (
-            <>Already have an account? <button type="button" onClick={() => setMode('login')}>Sign in</button></>
+            <>Have an account? <button type="button" onClick={() => setMode('login')}>Sign in</button></>
           )}
         </p>
-
-        <button type="button" className="auth-back" onClick={() => setRoute('landing')}>
-          ← Back to home
-        </button>
+        <button type="button" className="auth-back" onClick={() => setRoute('landing')}>← Home</button>
       </div>
     </div>
   )

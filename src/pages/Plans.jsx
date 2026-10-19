@@ -2,34 +2,30 @@ import React from 'react'
 import { useKelvid } from '../context/KelvidContext.jsx'
 
 const PLANS = [
-  { name: 'Starter', price: 'Free', desc: '65 credits · 720p · community support', cta: 'Current plan' },
-  { name: 'Creator', price: '$19/mo', desc: '1,000 credits · 1080p · priority queue · commercial use', cta: 'Upgrade' },
-  { name: 'Studio', price: '$79/mo', desc: '5,000 credits · 4K · API access · team seats', cta: 'Upgrade' },
+  { name: 'Starter', price: 'Free', desc: '65 credits · 720p · community' },
+  { name: 'Creator', price: '$19', desc: '1,000 credits · 1080p · priority · commercial' },
+  { name: 'Studio', price: '$79', desc: '5,000 credits · 4K · API · team seats' },
 ]
 
 export default function Plans() {
   const { setRoute } = useKelvid()
   return (
-    <div className="page-body">
-      <header className="page-top">
-        <div>
-          <h1>Plans</h1>
-          <p>Start free. Upgrade when you need more.</p>
-        </div>
-      </header>
-      <div className="plans-grid">
+    <div>
+      <div className="page-title">
+        <h1>Plans</h1>
+        <p>Start free, scale when you need to</p>
+      </div>
+      <div className="card-grid">
         {PLANS.map((p) => (
-          <div key={p.name} className="plan-card">
+          <div key={p.name} className="card">
             <h3>{p.name}</h3>
             <div className="plan-price">{p.price}</div>
             <p>{p.desc}</p>
-            <button className="btn-ghost" onClick={() => setRoute('studio')}>{p.cta}</button>
+            <button type="button" className="btn-ghost" style={{ marginTop: 14 }} onClick={() => setRoute('studio')}>
+              {p.price === 'Free' ? 'Current' : 'Upgrade'}
+            </button>
           </div>
         ))}
-      </div>
-      <div className="panel" style={{ marginTop: 24 }}>
-        <h3>How credits work</h3>
-        <p className="muted">Shorter clips use fewer credits. Longer duration and higher steps cost more. Failed jobs are not charged.</p>
       </div>
     </div>
   )

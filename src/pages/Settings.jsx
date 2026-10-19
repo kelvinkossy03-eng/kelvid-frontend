@@ -12,55 +12,48 @@ export default function Settings() {
     e.preventDefault()
     setApiKey(key)
     setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    setTimeout(() => setSaved(false), 1800)
   }
 
   return (
-    <div className="page-body">
-      <header className="page-top">
-        <div>
-          <h1>Settings</h1>
-          <p>Account, theme, and backend</p>
-        </div>
-      </header>
-
-      <div className="settings-grid">
+    <div>
+      <div className="page-title">
+        <h1>Settings</h1>
+        <p>Account, theme, backend</p>
+      </div>
+      <div className="card-grid">
         {user && (
-          <div className="panel">
+          <div className="card">
             <h3>Account</h3>
-            <div className="kv"><span>Name</span><strong>{user.name}</strong></div>
-            <div className="kv"><span>Email</span><strong>{user.email}</strong></div>
-            <div className="kv"><span>Credits</span><strong>{user.credits}</strong></div>
-            <button className="btn-ghost danger" onClick={logout} style={{ marginTop: 16 }}>Log out</button>
+            <div className="kv-row"><span>Name</span><strong>{user.name}</strong></div>
+            <div className="kv-row"><span>Email</span><strong>{user.email}</strong></div>
+            <div className="kv-row"><span>Credits</span><strong>{user.credits}</strong></div>
+            <button type="button" className="btn-ghost danger" style={{ marginTop: 14 }} onClick={logout}>Log out</button>
           </div>
         )}
-
-        <div className="panel">
-          <h3>Appearance</h3>
-          <p className="muted" style={{ marginBottom: 12 }}>Choose light or dark mode</p>
-          <div className="theme-pills">
-            <button type="button" className={theme === 'light' ? 'active' : ''} onClick={() => setTheme('light')}>Light</button>
-            <button type="button" className={theme === 'dark' ? 'active' : ''} onClick={() => setTheme('dark')}>Dark</button>
+        <div className="card">
+          <h3>Theme</h3>
+          <div className="theme-row">
+            <button type="button" className={theme === 'light' ? 'on' : ''} onClick={() => setTheme('light')}>Light</button>
+            <button type="button" className={theme === 'dark' ? 'on' : ''} onClick={() => setTheme('dark')}>Dark</button>
           </div>
         </div>
-
-        <div className="panel">
-          <h3>Backend API key</h3>
-          <p className="muted" style={{ marginBottom: 12 }}>Only needed if your backend requires KELVID_API_KEY.</p>
-          <form onSubmit={save}>
-            <input type="password" value={key} onChange={(e) => setKey(e.target.value)} placeholder="Paste API key" />
-            <div className="inline-row" style={{ marginTop: 12 }}>
-              <button type="submit" className="btn btn-primary">Save key</button>
-              {saved && <span className="ok-text">Saved</span>}
+        <div className="card">
+          <h3>API key</h3>
+          <p style={{ marginBottom: 8 }}>Only if backend requires KELVID_API_KEY.</p>
+          <form onSubmit={save} className="field-stack">
+            <input type="password" value={key} onChange={(e) => setKey(e.target.value)} placeholder="Paste key" />
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+              <button type="submit" className="btn-main">Save</button>
+              {saved && <span style={{ color: 'var(--ok)', fontSize: 13 }}>Saved</span>}
             </div>
           </form>
         </div>
-
-        <div className="panel">
-          <h3>Backend status</h3>
+        <div className="card">
+          <h3>Backend</h3>
           <p>{health}</p>
-          <p className="muted" style={{ marginTop: 8 }}>
-            API URL: <code>{import.meta.env.VITE_API_URL || 'same-origin'}</code>
+          <p style={{ marginTop: 8, fontSize: 12, color: 'var(--text-3)' }}>
+            <code>{import.meta.env.VITE_API_URL || 'same-origin'}</code>
           </p>
         </div>
       </div>
