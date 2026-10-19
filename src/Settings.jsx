@@ -1,28 +1,67 @@
-import React from 'react'
-import { API_BASE } from './api.js'
+import React, { useState } from 'react'
+import { apiFetch, setApiKey } from './api.js'
 
-export default function Settings({ user, health, openAuth, signOut, toast, frames, selectedModel, selectedProvider }) {
+export default function Settings({ apiKey, setApiKey, health }) {
+  const [key, setKey] = useState(apiKey || '')
+  const [saved, setSaved] = useState(false)
+
+  const save = async (e) => {
+    e.preventDefault()
+    setApiKey(key)
+    try {
+      await apiFetch('/api/health')
+      localStorage.setItem('kelvid-api-key', key)
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2500)
+    } catch {
+      setSaved('bad')
+    }
+  }
+
   return (
-    <>
+    <div className="wrap">
       <div className="page-hero">
-        <h1>Settings</h1>
-        <p>Account, API connection, defaults, and data controls.</p>
+        <h1>Backend connection</h1>
+        <p>Generate requests are signed with a single <b>X-API-Key</b> value. Paste the same key in your backend (KELVID_API_KEY) and here — the backend validates every generation call.</p>
       </div>
+
+      <div className="glass-card" style={{ padding: 22 }}>
+        <div className="card-header">
+          <h2>X-API-Key (frontend)</h2>
+        </div>
+        <form onSubmit={save}>
+          <div className="sora-field">
+            <label htmlFor="apiKey">Key</label>
+            <input
+              id="apiKey"
+              className="sora-input"
+              value={key}
+              onChange={(e) => setKey(e.target.value)}
+              placeholder="Paste KELVID_API_KEY"
+            />
+          </div>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 14 }}>
+            <button type="submit" className="btn btn-primary btn-generate">Save key</button>
+            {saved === 'saved' && <span style={{ color: '#34d399', fontWeight: 800 }}>Saved ✓</span>}
+            {saved === 'bad' && <span style={{ color: '#fb7185', fontWeight: 800 }}>Not reachable — check backend URL & key</span>}
+          </div>
+        </form>
+      </div>
+
       <div className="info-card">
-        <h3>Account</h3>
-        <p>
-          {user ? `${user.name} (${user.email}) — ${user.plan}, ${user.credits} credits` : 'You are browsing as a guest. Sign in to save your profile.'}
+        <h3>Backend status</h3>
+        <p>{health}</p>
+        <p className="card-sub" style={{ margin: 0 }}>
+          Backend URL: <code style={{ background: 'rgba(255,255,255,.08)', padding: '2px 6px', borderRadius: 4, fontSize: 12 }}>{import.meta.env.VITE_API_URL || 'same-origin'}</code>
         </p>
-        {!user && <button type="button" className="btn-ghost mt-2" onClick={() => openAuth('signin')}>Sign in</button>}
-        {user && <button type="button" className="btn-ghost mt-2" onClick={() => { signOut(); toast('Signed out.') }}>Log out</button>}
       </div>
-      <div className="info-card">
-        <h3>API connection</h3>
-        <p>Backend: {API_BASE || 'same-origin'} | Status: {health}</p>
-        <div className="settings-row"><span>Backend API key header</span><span>X-API-Key</span></div>
-        <div className="settings-row"><span>Default frames</span><span>{frames} frames ({Math.round(frames / 24)}s)</span></div>
-        <div className="settings-row"><span>Default model</span><span>{selectedModel ? selectedModel.split('/').pop() : 'Auto-select'}</span></div>
+
+      <div className="info-card" style={{ marginTop: 16 }}>
+        <h3>Server setup</h3>
+        <p className="card-sub" style={{ margin: 0 }}>
+          On the backend, add <b>KELVID_API_KEY</b> to the environment / <code>.env</code>, restart the server, then paste the same value into the key field above.
+        </p>
       </div>
-    </>
+    </div>
   )
 }

@@ -1,4 +1,4 @@
-// Central API helper — all backend URLs flow through here.
+// Central API helper â€” all backend URLs flow through here.
 // VITE_API_URL=http://localhost:8000 (dev) or https://your-backend... (prod).
 // Blank = same-origin (Vite proxy or served together).
 export const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
@@ -13,11 +13,18 @@ export function resolveUrl(url) {
   return apiUrl(url)
 }
 
+export let API_KEY = ''
+
+export function setApiKey(key) {
+  API_KEY = key
+}
+
 export async function apiFetch(path, opts = {}) {
   const headers = { ...(opts.headers || {}) }
   if (opts.body && !(opts.body instanceof FormData)) {
     headers['Content-Type'] = headers['Content-Type'] || 'application/json'
   }
+  if (API_KEY) headers['X-API-Key'] = API_KEY
   const res = await fetch(apiUrl(path), { ...opts, headers })
   let data = null
   let bodyText = ''

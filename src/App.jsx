@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { API_BASE, apiFetch, resolveUrl } from './api.js'
-import { useAuth } from './auth.jsx'
+import { apiFetch, resolveUrl, setApiKey } from './api.js'
 import Nav from './Nav.jsx'
 import Studio from './Studio.jsx'
 import Gallery from './Gallery.jsx'
@@ -11,14 +10,7 @@ import ToastContainer from './ToastContainer.jsx'
 import Footer from './Footer.jsx'
 import Landing from './Landing.jsx'
 
-window.onerror = (msg, url, line, col, err) => {
-  console.error('Uncaught error:', msg, 'at', url, ':', line, ':', col, err)
-  return false
-}
-window.addEventListener('unhandledrejection', (event) => {
-  console.error('Unhandled promise rejection:', event.reason)
-})
-
+// ---------- error boundary ----------
 class ErrorBoundary extends React.Component {
   state = { hasError: false, error: null, errorInfo: null }
   static getDerivedStateFromError(error) {
@@ -50,6 +42,7 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+// ---------- polling hook ----------
 function usePollJob(onDone, onError) {
   const polling = useRef(new Set())
   const poll = useCallback(async (id) => {
@@ -74,47 +67,19 @@ function usePollJob(onDone, onError) {
   return poll
 }
 
-const PROTECTED_ROUTES = ['studio', 'gallery', 'settings']
-
-function AuthGate({ openAuth, title, body }) {
-  return (
-    <div className="auth-gate">
-      <div className="auth-gate-card glass-card">
-        <img src="/logo.svg" alt="" width="56" height="56" className="auth-gate-logo" />
-        <h2>{title || 'Sign in to continue'}</h2>
-        <p>
-          {body || 'The studio, your gallery, and settings are private to your account. Create a free account — it takes less than a minute.'}
-        </p>
-        <ul className="auth-gate-list">
-          <li>65 free credits on signup — several full renders</li>
-          <li>Private cloud gallery with search, download, delete</li>
-          <li>Live queue with retry and job history</li>
-        </ul>
-        <div className="auth-gate-actions">
-          <button type="button" className="btn btn-primary" onClick={() => openAuth('signup')}>
-            Create free account
-          </button>
-          <button type="button" className="btn-ghost" onClick={() => openAuth('signin')}>
-            I already have an account
-          </button>
-        </div>
-        <p className="auth-gate-fine">No card required. Powered by Firebase Authentication.</p>
-      </div>
-    </div>
-  )
-}
-
 export default function App() {
-  const { user, loading, openAuth, signOut } = useAuth()
-
+  // API key (backend auth) - remembered across reloads
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem('kelvid-api-key') || '')
   const [route, setRoute] = useState('landing')
-  const [accountOpen, setAccountOpen] = useState(false)
   const [prompt, setPrompt] = useState('')
   const [negativePrompt, setNegativePrompt] = useState('')
   const [models, setModels] = useState([])
-
-  const [apiKey, setApiKey] = useState('')
-  const [health, setHealth] = useState('connecting...')
+  const [selectedModel, setSelectedModel] = useState('')
+  const [selectedProvider, setSelectedProvider] = useState('')
+  const [frames, setFrames] = useState(48)
+  const [steps, setSteps] = useState(30)
+  const [guide, setGuide] = useState(7.5)
+  const [seed, setSeed] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [jobs, setJobs] = useState([])
@@ -123,14 +88,11 @@ export default function App() {
   const [videoUrl, setVideoUrl] = useState('')
   const [videoMeta, setVideoMeta] = useState('')
   const [toasts, setToasts] = useState([])
+  const [health, setHealth] = useState('connecting...')
 
-  const [showSettings, setShowSettings] = useState(false)
-  const [selectedModel, setSelectedModel] = useState('')
-  const [selectedProvider, setSelectedProvider] = useState('')
-  const [frames, setFrames] = useState(48)
-  const [steps, setSteps] = useState(30)
-  const [guide, setGuide] = useState(7.5)
-  const [seed, setSeed] = useState('')
+  useEffect(() => {
+    localStorage.setItem('kelvid-api-key', apiKey)
+  }, [apiKey])
 
   const toast = useCallback((msg) => {
     const id = Math.random().toString(36).slice(2)
@@ -138,23 +100,43 @@ export default function App() {
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 4500)
   }, [])
 
+  // ---- public backend data (GET endpoints, no auth gate) ----
+  useEffect(() => {
+    apiFetch('/api/health').then((d) => {
+      if (!d) return
+      setHealth(d.status === 'ok' ? `online v${d.version} | ${d.active_jobs} active` : d.status)
+    }).catch(() => setHealth('offline'))
+    apiFetch('/api/models').then((d) => {
+      if (!d) return
+      setModels(d.models || [])
+      if (d.default) setSelectedModel(d.default)
+      if (d.provider) setSelectedProvider(d.provider)
+    }).catch(() => toast('Failed to load models'))
+  }, [])
+
   const refreshJobs = useCallback(async () => {
-    try {
-      const d = await apiFetch('/api/jobs')
-      setJobs(d.jobs || [])
-    } catch (err) {
-      toast(err.message || 'Failed to load jobs')
-    }
+    try { const d = await apiFetch('/api/jobs'); setJobs(d.jobs || []) }
+    catch (err) { toast(err.message || 'Failed to load jobs') }
   }, [toast])
 
   const refreshGallery = useCallback(async () => {
     try {
       const d = await apiFetch('/api/gallery')
       setGallery((d.items || []).map((x) => ({ ...x, url: resolveUrl(x.url) })))
-    } catch (err) {
-      toast(err.message || 'Failed to load gallery')
-    }
+    } catch (err) { toast(err.message || 'Failed to load gallery') }
   }, [toast])
+
+  useEffect(() => {
+    void refreshJobs().catch(() => toast('Failed to load jobs'))
+    void refreshGallery().catch(() => toast('Failed to load gallery'))
+    const h = setInterval(() => {
+      apiFetch('/api/health').then((d) => {
+        if (!d) return
+        setHealth(d.status === 'ok' ? `online v${d.version} | ${d.active_jobs} active` : d.status)
+      }).catch(() => setHealth('cannot reach backend'))
+    }, 15000)
+    return () => clearInterval(h)
+  }, [refreshJobs, refreshGallery, toast])
 
   const handleJob = useCallback((j, elapsed) => {
     if (!j) return
@@ -172,39 +154,6 @@ export default function App() {
 
   const poll = usePollJob(handleJob, toast)
 
-  // Only talk to the backend once a user is signed in — guests see the public
-  // landing page and never receive jobs, gallery, health, or model data.
-  useEffect(() => {
-    if (!user) {
-      setHealth('offline')
-      return undefined
-    }
-    apiFetch('/api/health').then((d) => {
-      if (!d) return
-      setHealth(d.token_configured ? `online v${d.version} | ${d.active_jobs} active` : 'online | NO HF TOKEN')
-    }).catch(() => setHealth(API_BASE ? `cannot reach ${API_BASE}` : 'offline'))
-    apiFetch('/api/models').then((d) => {
-      if (!d) return
-      setModels(d.models || [])
-      if (d.default) setSelectedModel(d.default)
-      if (d.provider) setSelectedProvider(d.provider)
-    }).catch(() => toast('Failed to load models'))
-    void refreshJobs().catch(() => toast('Failed to load jobs'))
-    void refreshGallery().catch(() => toast('Failed to load gallery'))
-    const h = setInterval(() => {
-      apiFetch('/api/health').then((d) => {
-        if (!d) return
-        setHealth(d.token_configured ? `online v${d.version} | ${d.active_jobs} active` : 'online | NO HF TOKEN')
-      }).catch(() => setHealth('cannot reach backend'))
-    }, 15000)
-    return () => clearInterval(h)
-  }, [user, refreshJobs, refreshGallery, toast])
-
-  // If the user signs out while on a private route, fall back to the landing page.
-  useEffect(() => {
-    if (!user && PROTECTED_ROUTES.includes(route)) setRoute('landing')
-  }, [user, route])
-
   const submit = useCallback(async (e) => {
     e.preventDefault()
     if (!prompt.trim()) return
@@ -221,11 +170,9 @@ export default function App() {
       if (selectedModel) body.model = selectedModel
       if (selectedProvider) body.provider = selectedProvider
       if (seed) body.seed = parseInt(seed, 10)
-      const headers = { 'Content-Type': 'application/json' }
-      if (apiKey) headers['X-API-Key'] = apiKey
       const d = await apiFetch('/api/generate', {
         method: 'POST',
-        headers,
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
       if (d.job_id) {
@@ -252,7 +199,7 @@ export default function App() {
       setError(msg)
       toast(msg)
     }
-  }, [poll, apiKey, toast])
+  }, [apiKey, toast, poll])
 
   const removeItem = useCallback(async (filename) => {
     try {
@@ -266,39 +213,16 @@ export default function App() {
       setError(msg)
       toast(msg)
     }
-  }, [refreshGallery, toast, apiKey])
-
-  const userCredits = user ? user.credits : 65
-
-  if (loading) {
-    return (
-      <div className="wrap loading-screen">
-        <div className="spinner" />
-        <p>Signing you in…</p>
-      </div>
-    )
-  }
+  }, [apiKey, refreshGallery, toast])
 
   return (
     <ErrorBoundary>
       <div className="wrap">
-        <Nav
-          route={route}
-          setRoute={setRoute}
-          user={user}
-          health={health}
-          openAuth={openAuth}
-          accountOpen={accountOpen}
-          setAccountOpen={setAccountOpen}
-          signOut={signOut}
-          toast={toast}
-        />
+        <Nav route={route} setRoute={setRoute} apiKey={apiKey} setApiKey={setApiKey} />
 
-        {route === 'landing' && (
-          <Landing user={user} openAuth={openAuth} setRoute={setRoute} />
-        )}
+        {route === 'landing' && <Landing setRoute={setRoute} />}
 
-        {route === 'studio' && (user ? (
+        {route === 'studio' && (
           <Studio
             prompt={prompt}
             setPrompt={setPrompt}
@@ -337,11 +261,9 @@ export default function App() {
             videoMeta={videoMeta}
             setVideoMeta={setVideoMeta}
           />
-        ) : (
-          <AuthGate openAuth={openAuth} />
-        ))}
+        )}
 
-        {route === 'gallery' && (user ? (
+        {route === 'gallery' && (
           <Gallery
             shown={gallery.filter((x) => {
               const q = filter.toLowerCase()
@@ -354,36 +276,11 @@ export default function App() {
             refreshJobs={refreshJobs}
             removeItem={removeItem}
           />
-        ) : (
-          <AuthGate
-            openAuth={openAuth}
-            title="Your gallery is private"
-            body="Sign in to browse, replay, download, and delete your generated videos."
-          />
-        ))}
+        )}
 
         {route === 'plans' && <Plans />}
-
         {route === 'docs' && <Docs />}
-
-        {route === 'settings' && (user ? (
-          <Settings
-            user={user}
-            health={health}
-            openAuth={openAuth}
-            signOut={signOut}
-            toast={toast}
-            frames={frames}
-            selectedModel={selectedModel}
-            selectedProvider={selectedProvider}
-          />
-        ) : (
-          <AuthGate
-            openAuth={openAuth}
-            title="Settings are account-only"
-            body="Sign in to manage your profile, view plan details, and check backend connectivity."
-          />
-        ))}
+        {route === 'settings' && <Settings apiKey={apiKey} setApiKey={setApiKey} health={health} />}
 
         <ToastContainer toasts={toasts} />
         <Footer setRoute={setRoute} />
