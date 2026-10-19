@@ -1,85 +1,67 @@
 import React, { useState } from 'react'
 import { useKelvid } from './context/KelvidContext.jsx'
-import { apiFetch } from './api.js'
 
 export default function Settings() {
   const { apiKey, setApiKey, health, user, logout } = useKelvid()
   const [key, setKey] = useState(apiKey || '')
-  const [status, setStatus] = useState(null)
+  const [saved, setSaved] = useState(false)
 
-  const save = async (e) => {
+  const save = (e) => {
     e.preventDefault()
     setApiKey(key)
-    try {
-      await apiFetch('/api/health')
-      setStatus('ok')
-      setTimeout(() => setStatus(null), 2500)
-    } catch {
-      setStatus('error')
-    }
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
   }
 
   return (
-    <div className="page">
-      <div className="page-header">
+    <div className="page-content">
+      <header className="page-header">
         <div>
           <h1>Settings</h1>
           <p>Account and backend connection</p>
         </div>
-      </div>
+      </header>
 
       {user && (
-        <div className="settings-card">
+        <div className="card">
           <h3>Account</h3>
-          <div className="settings-row">
+          <div className="setting-row">
             <span>Name</span>
             <strong>{user.name}</strong>
           </div>
-          <div className="settings-row">
+          <div className="setting-row">
             <span>Email</span>
             <strong>{user.email}</strong>
           </div>
-          <div className="settings-row">
+          <div className="setting-row">
             <span>Credits</span>
             <strong>{user.credits}</strong>
           </div>
-          <button type="button" className="btn-ghost danger" onClick={logout} style={{ marginTop: 16 }}>
-            Log out
-          </button>
+          <button className="btn-ghost danger" onClick={logout}>Log out</button>
         </div>
       )}
 
-      <div className="settings-card">
-        <h3>Backend API key</h3>
-        <p className="muted">
-          Only needed if your backend requires <code>KELVID_API_KEY</code>.
-          Requests send it as the <code>X-API-Key</code> header.
-        </p>
+      <div className="card">
+        <h3>Backend API Key</h3>
+        <p className="muted">Only needed if your backend requires <code>KELVID_API_KEY</code>.</p>
         <form onSubmit={save}>
-          <div className="field">
-            <label htmlFor="apiKey">API Key</label>
-            <input
-              id="apiKey"
-              type="password"
-              value={key}
-              onChange={(e) => setKey(e.target.value)}
-              placeholder="Paste your KELVID_API_KEY"
-            />
-          </div>
-          <div className="form-actions">
+          <input
+            type="password"
+            value={key}
+            onChange={(e) => setKey(e.target.value)}
+            placeholder="Paste your API key"
+          />
+          <div className="row mt">
             <button type="submit" className="btn btn-primary">Save key</button>
-            {status === 'ok' && <span className="success">Saved ✓</span>}
-            {status === 'error' && <span className="error-text">Backend not reachable</span>}
+            {saved && <span className="success">Saved ✓</span>}
           </div>
         </form>
       </div>
 
-      <div className="settings-card">
+      <div className="card">
         <h3>Backend status</h3>
         <p>{health}</p>
-        <p className="muted">
-          URL: <code>{import.meta.env.VITE_API_URL || 'same-origin'}</code>
-        </p>
+        <p className="muted">API URL: <code>{import.meta.env.VITE_API_URL || 'same-origin'}</code></p>
       </div>
     </div>
   )

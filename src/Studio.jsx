@@ -5,15 +5,13 @@ import { resolveUrl } from './api.js'
 
 export default function Studio() {
   const {
-    prompt, setPrompt,
-    negativePrompt, setNegativePrompt,
-    models, selectedModel, setSelectedModel,
-    selectedProvider, setSelectedProvider,
+    prompt, setPrompt, negativePrompt, setNegativePrompt,
+    models, selectedModel, setSelectedModel, selectedProvider, setSelectedProvider,
     frames, setFrames, steps, setSteps, guide, setGuide, seed, setSeed,
     busy, error, submit, retryJob, removeItem,
     jobs, gallery, filter, setFilter,
     videoUrl, setVideoUrl, videoMeta, setVideoMeta,
-    refreshGallery, refreshJobs,
+    refreshGallery, refreshJobs, user, setRoute,
   } = useKelvid()
 
   const shown = gallery.filter((x) => {
@@ -21,18 +19,24 @@ export default function Studio() {
     return !q || (x.prompt || '').toLowerCase().includes(q)
   })
 
+  if (!user) {
+    return (
+      <div className="locked">
+        <div className="locked-card">
+          <h2>Sign in to use Studio</h2>
+          <p>Create a free account to generate videos and save them to your gallery.</p>
+          <button className="btn btn-primary" onClick={() => setRoute('login')}>Sign in / Create account</button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="studio">
-      {/* LEFT — Controls */}
       <aside className="studio-left">
         <form onSubmit={submit} className="gen-panel">
-          <div className="panel-header">
-            <h2>Create</h2>
-            <p>Describe the video you want</p>
-          </div>
-
-          <div className="field">
-            <div className="field-top">
+          <div className="section">
+            <div className="label-row">
               <label htmlFor="prompt">Prompt</label>
               <span className="count">{prompt.length}</span>
             </div>
@@ -40,24 +44,20 @@ export default function Studio() {
               id="prompt"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="A cinematic drone shot over a neon city at night, rain reflecting on the streets..."
+              placeholder="Describe the video you want to create..."
               rows={4}
             />
-          </div>
-
-          <div className="field">
-            <label htmlFor="negative">Negative prompt</label>
+            <label htmlFor="negative" className="mt">Negative prompt</label>
             <textarea
               id="negative"
               value={negativePrompt}
               onChange={(e) => setNegativePrompt(e.target.value)}
-              placeholder="blurry, watermark, distorted faces, low quality..."
+              placeholder="blurry, watermark, distorted faces..."
               rows={2}
             />
           </div>
 
-          {/* Model selection */}
-          <div className="field">
+          <div className="section">
             <label>Model</label>
             <div className="model-grid">
               {models.length === 0 && <span className="muted">Loading models...</span>}
@@ -70,22 +70,18 @@ export default function Studio() {
                   <button
                     key={id + provider}
                     type="button"
-                    className={`model-card ${active ? 'active' : ''}`}
-                    onClick={() => {
-                      setSelectedModel(id)
-                      setSelectedProvider(provider)
-                    }}
+                    className={`model-btn ${active ? 'active' : ''}`}
+                    onClick={() => { setSelectedModel(id); setSelectedProvider(provider) }}
                   >
-                    <span className="model-name">{label.split('/').pop()}</span>
-                    <span className="model-provider">{provider}</span>
+                    <strong>{label.split('/').pop()}</strong>
+                    <span>{provider}</span>
                   </button>
                 )
               })}
             </div>
           </div>
 
-          {/* Inspiration */}
-          <div className="field">
+          <div className="section">
             <label>Inspiration</label>
             <div className="chips">
               {IDEAS.map((idea, i) => (
@@ -94,102 +90,62 @@ export default function Studio() {
                   type="button"
                   className={`chip ${prompt === idea ? 'active' : ''}`}
                   onClick={() => setPrompt(idea)}
-                  title={idea}
                 >
-                  {idea.slice(0, 28)}…
+                  {idea.slice(0, 28)}...
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Advanced */}
-          <details className="advanced">
+          <details className="advanced" open>
             <summary>Advanced settings</summary>
-            <div className="advanced-body">
-              <div className="field">
+            <div className="adv-grid">
+              <div>
                 <label>Duration</label>
                 <div className="chips">
                   {[24, 48, 96, 192, 384].map((f) => (
-                    <button
-                      key={f}
-                      type="button"
-                      className={`chip ${frames === f ? 'active' : ''}`}
-                      onClick={() => setFrames(f)}
-                    >
+                    <button key={f} type="button" className={`chip ${frames === f ? 'active' : ''}`} onClick={() => setFrames(f)}>
                       {Math.round(f / 24)}s
                     </button>
                   ))}
                 </div>
-                <input
-                  type="range"
-                  min={8}
-                  max={480}
-                  value={frames}
-                  onChange={(e) => setFrames(+e.target.value)}
-                />
-                <span className="hint">{frames} frames ≈ {Math.round(frames / 24)}s</span>
+                <input type="range" min={8} max={720} value={frames} onChange={(e) => setFrames(+e.target.value)} />
+                <span className="hint">{frames} frames · ~{Math.round(frames / 24)}s</span>
               </div>
-
-              <div className="row-2">
-                <div className="field">
-                  <label>Steps ({steps})</label>
-                  <input type="range" min={5} max={80} value={steps} onChange={(e) => setSteps(+e.target.value)} />
-                </div>
-                <div className="field">
-                  <label>Guidance ({guide})</label>
-                  <input type="range" min={1} max={20} step={0.5} value={guide} onChange={(e) => setGuide(+e.target.value)} />
-                </div>
+              <div>
+                <label>Steps ({steps})</label>
+                <input type="range" min={5} max={80} value={steps} onChange={(e) => setSteps(+e.target.value)} />
               </div>
-
-              <div className="field">
-                <label htmlFor="seed">Seed (optional)</label>
-                <input
-                  id="seed"
-                  value={seed}
-                  onChange={(e) => setSeed(e.target.value)}
-                  placeholder="Leave blank for random"
-                />
+              <div>
+                <label>Guidance ({guide})</label>
+                <input type="range" min={1} max={20} step={0.5} value={guide} onChange={(e) => setGuide(+e.target.value)} />
+              </div>
+              <div>
+                <label>Seed</label>
+                <input type="text" value={seed} onChange={(e) => setSeed(e.target.value)} placeholder="blank = random" />
               </div>
             </div>
           </details>
 
-          <button
-            type="submit"
-            className="btn btn-primary btn-full"
-            disabled={busy || !prompt.trim()}
-          >
-            {busy ? 'Generating…' : 'Generate video'}
+          <button type="submit" className="btn btn-primary generate" disabled={busy || !prompt.trim()}>
+            {busy ? 'Generating...' : 'Generate video'}
           </button>
 
           {error && <div className="error-box">{error}</div>}
 
-          {/* Live queue */}
           <div className="queue">
             <div className="queue-title">Live queue</div>
-            {jobs.length === 0 && (
-              <p className="muted">No jobs yet. Your generations will appear here.</p>
-            )}
+            {jobs.length === 0 && <p className="muted">No jobs yet</p>}
             {jobs.slice(0, 8).map((j) => (
-              <div className="job" key={j.job_id}>
+              <div key={j.job_id} className="job">
                 <span className={`badge ${j.status}`}>{j.status}</span>
-                <span className="job-text">{(j.prompt || '').slice(0, 45) || '—'}</span>
+                <span className="job-text">{(j.prompt || '').slice(0, 40)}</span>
                 <div className="job-actions">
                   {j.status === 'done' && j.url && (
-                    <button
-                      type="button"
-                      className="btn-ghost xs"
-                      onClick={() => {
-                        setVideoUrl(resolveUrl(j.url))
-                        setVideoMeta(`From queue · ${j.job_id.slice(0, 6)}`)
-                      }}
-                    >
-                      Play
-                    </button>
+                    <button type="button" className="btn-ghost sm" onClick={() => { setVideoUrl(resolveUrl(j.url)); setVideoMeta(j.prompt) }}>Play</button>
                   )}
                   {j.status === 'failed' && (
-                    <button type="button" className="btn-ghost xs" onClick={() => retryJob(j.job_id)}>
-                      Retry
-                    </button>
+                    <button type="button" className="btn-ghost sm" onClick={() => retryJob(j.job_id)}>Retry</button>
                   )}
                 </div>
               </div>
@@ -198,87 +154,54 @@ export default function Studio() {
         </form>
       </aside>
 
-      {/* RIGHT — Preview + Gallery */}
       <section className="studio-right">
         <div className="preview-card">
-          <div className="card-top">
+          <div className="card-head">
             <div>
-              <h3>Preview</h3>
+              <h2>Preview</h2>
               <p>{videoMeta || 'Your video will appear here'}</p>
             </div>
-            {videoUrl && (
-              <a className="btn-ghost sm" href={videoUrl} download>
-                Download
-              </a>
-            )}
+            {videoUrl && <a className="btn-ghost sm" href={videoUrl} download>Download</a>}
           </div>
-
           {!videoUrl ? (
-            <div className="empty-state">
-              <span className="empty-icon">🎬</span>
+            <div className="empty">
+              <span>🎬</span>
               <p>Generate a video to see it here</p>
             </div>
           ) : (
-            <div className="video-wrap">
-              <video key={videoUrl} src={videoUrl} controls autoPlay loop playsInline />
-            </div>
+            <video key={videoUrl} src={videoUrl} controls autoPlay loop playsInline />
           )}
         </div>
 
         <div className="gallery-card">
-          <div className="card-top">
+          <div className="card-head">
             <div>
-              <h3>Gallery</h3>
-              <p>{shown.length} video{shown.length !== 1 ? 's' : ''}</p>
+              <h2>Gallery</h2>
+              <p>{shown.length} videos</p>
             </div>
-            <div className="gallery-tools">
+            <div className="row">
               <input
                 className="search"
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
-                placeholder="Search…"
+                placeholder="Search..."
               />
-              <button
-                type="button"
-                className="btn-ghost sm"
-                onClick={() => { refreshGallery(); refreshJobs() }}
-              >
-                Refresh
-              </button>
+              <button type="button" className="btn-ghost sm" onClick={() => { refreshGallery(); refreshJobs() }}>↻</button>
             </div>
           </div>
-
           <div className="gallery-grid">
             {shown.map((x) => (
-              <div
-                className="g-item"
-                key={x.filename}
-                onClick={() => {
-                  setVideoUrl(x.url)
-                  setVideoMeta(x.prompt || '')
-                }}
-              >
+              <div key={x.filename} className="g-item" onClick={() => { setVideoUrl(x.url); setVideoMeta(x.prompt) }}>
                 <video src={x.url} muted preload="metadata" />
-                <button
-                  className="g-delete"
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    removeItem(x.filename)
-                  }}
-                >
-                  ✕
-                </button>
+                <button className="del" onClick={(e) => { e.stopPropagation(); removeItem(x.filename) }}>×</button>
                 <div className="g-info">
                   <p>{(x.prompt || '').slice(0, 60)}</p>
-                  <span>{(x.created_at || '').slice(0, 10)}</span>
                 </div>
               </div>
             ))}
-
             {shown.length === 0 && (
-              <div className="empty-state small">
-                <p>{gallery.length === 0 ? 'No videos yet' : 'No matches'}</p>
+              <div className="empty small">
+                <p>No videos yet</p>
               </div>
             )}
           </div>
