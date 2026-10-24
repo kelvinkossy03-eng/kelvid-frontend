@@ -1,18 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#1c1c28"/>
-      <stop offset="1" stop-color="#0a0a10"/>
-    </linearGradient>
-    <linearGradient id="mark" x1="14" y1="12" x2="50" y2="52" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#9be1ff"/>
-      <stop offset="0.5" stop-color="#7c9cff"/>
-      <stop offset="1" stop-color="#c4b5fd"/>
-    </linearGradient>
-  </defs>
-  <rect x="2" y="2" width="60" height="60" rx="18" fill="url(#bg)" stroke="rgba(255,255,255,0.16)" stroke-width="2"/>
-  <path d="M18 14h6.4v15.2L37.2 14h7.8L31.9 28.6 46 50h-8.2L24.4 33.9V50H18z" fill="url(#mark)"/>
-  <circle cx="47.5" cy="17" r="3.4" fill="#9be1ff">
-    <animate attributeName="opacity" values="1;0.3;1" dur="2.4s" repeatCount="indefinite"/>
-  </circle>
+  <rect width="64" height="64" rx="18" fill="#151513"/>
+  <path d="M15 18h8v11l12-11h11L30 32l17 14H35L23 35v11h-8z" fill="#d7ff64"/>
+  <path d="M42 14h8v8h-8z" fill="#d7ff64"/>
 </svg>
