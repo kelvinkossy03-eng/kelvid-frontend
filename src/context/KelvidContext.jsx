@@ -10,14 +10,8 @@ export function useKelvid() {
 }
 
 export function KelvidProvider({ children }) {
-  const [user, setUser] = useState(() => {
-    try {
-      const saved = localStorage.getItem('kelvid-user')
-      return saved ? JSON.parse(saved) : null
-    } catch {
-      return null
-    }
-  })
+  // Local browser state is not authentication. Do not restore client-forged sessions.
+  const [user, setUser] = useState(null)
   const [apiKey, setApiKeyState] = useState(() => localStorage.getItem('kelvid-api-key') || '')
   const [route, setRoute] = useState(user ? 'studio' : 'landing')
   const [prompt, setPrompt] = useState('')
@@ -39,13 +33,6 @@ export function KelvidProvider({ children }) {
   const [videoMeta, setVideoMeta] = useState('')
   const [toasts, setToasts] = useState([])
   const [health, setHealth] = useState('checking...')
-
-  const login = useCallback((email, name = '') => {
-    const u = { email, name: name || email.split('@')[0], credits: 65 }
-    localStorage.setItem('kelvid-user', JSON.stringify(u))
-    setUser(u)
-    setRoute('studio')
-  }, [])
 
   const logout = useCallback(() => {
     localStorage.removeItem('kelvid-user')
@@ -212,7 +199,7 @@ export function KelvidProvider({ children }) {
   }, [refreshGallery, toast])
 
   const value = {
-    user, login, logout,
+    user, logout,
     apiKey, setApiKey,
     route, setRoute,
     prompt, setPrompt,
