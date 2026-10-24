@@ -4,7 +4,7 @@ import { useKelvid } from '../context/KelvidContext.jsx'
 const ico = { width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.9, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true }
 
 export default function Login() {
-  const { login, setRoute } = useKelvid()
+  const { setRoute } = useKelvid()
   const [mode, setMode] = useState('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -28,11 +28,8 @@ export default function Login() {
       setErr('Password must be at least 6 characters')
       return
     }
-    setLoading(true)
-    setTimeout(() => {
-      login(email.trim().toLowerCase(), name.trim())
-      setLoading(false)
-    }, 400)
+    // Do not pretend to authenticate users locally. A real identity provider must be configured first.
+    setErr('Sign-in is not connected to an authentication service yet. No account was created. Please try again after authentication is configured.')
   }
 
   return (
