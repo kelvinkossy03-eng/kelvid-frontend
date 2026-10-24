@@ -3,6 +3,10 @@ __pycache__/
 .venv/
 .env
 outputs/*.mp4
+outputs/*.json
+outputs/*.tmp
+firebase-debug.log
+*.log
 
 dist/
 node_modules/
