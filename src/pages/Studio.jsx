@@ -41,7 +41,7 @@ export default function Studio() {
       {/* Top command bar */}
       <header className="stu-bar">
         <div className="stu-bar-left">
-          <h1>Studio</h1>
+          <div><div style={{fontSize:10,letterSpacing:".18em",color:"var(--text-3)",textTransform:"uppercase",marginBottom:8}}>YOUR CREATIVE WORKSPACE</div><h1>Studio</h1></div>
           <span className="stu-pill">{jobs.filter((j) => j.status === 'running' || j.status === 'queued').length} active</span>
         </div>
         <div className="stu-bar-right">
@@ -54,7 +54,9 @@ export default function Studio() {
       {/* Main canvas: prompt + stage */}
       <div className="stu-canvas">
         <form className="stu-composer" onSubmit={submit}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}><label htmlFor="kelvid-prompt" style={{fontSize:11,letterSpacing:".12em",textTransform:"uppercase",color:"var(--text-3)"}}>Describe your scene</label><span style={{fontFamily:"var(--mono)",fontSize:10,color:"var(--text-3)"}}>PROMPT / 01</span></div>
           <textarea
+            id="kelvid-prompt"
             className="stu-prompt"
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
@@ -153,6 +155,8 @@ export default function Studio() {
             </div>
           ) : !videoUrl ? (
             <div className="stu-stage-empty">
+              <div style={{position:"absolute",top:18,left:20,fontFamily:"var(--mono)",fontSize:10,letterSpacing:".16em",color:"#9aa68b"}}>KELVID / OUTPUT MONITOR</div>
+              <div style={{position:"absolute",top:18,right:20,fontFamily:"var(--mono)",fontSize:10,color:"#6f7966"}}>16:09&nbsp; · &nbsp;LIVE CANVAS</div>
               <div className="stu-stage-mark" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z" /></svg>
               </div>
