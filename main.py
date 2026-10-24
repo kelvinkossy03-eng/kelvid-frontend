@@ -34,7 +34,9 @@ MAX_CONCURRENT_JOBS = int(os.getenv("MAX_CONCURRENT_JOBS", "2"))
 MAX_QUEUE = int(os.getenv("MAX_QUEUE", "20"))
 RATE_LIMIT_PER_MIN = int(os.getenv("RATE_LIMIT_PER_MIN", "20"))
 _raw_cors = os.getenv("CORS_ORIGINS", "*").strip()
-CORS_ORIGINS = ["*"] if _raw_cors == "*" else [o.strip() for o in _raw_cors.split(",") if o.strip()]
+CORS_ORIGINS = [o.strip() for o in _raw_cors.split(",") if o.strip() and o.strip() != "*"]
+if not CORS_ORIGINS:
+    CORS_ORIGINS = ["https://kelvid-frontend-ten.vercel.app"]
 API_KEY = os.getenv("KELVID_API_KEY", "").strip()
 FRONTEND_URL = os.getenv("FRONTEND_URL", "").strip()
 
@@ -120,7 +122,12 @@ def _rate_ok(ip: str) -> bool:
 
 
 def _check_auth(request: Request) -> None:
-    if API_KEY and request.headers.get("X-API-Key", "") != API_KEY:
+    # Fail closed when the server secret is not configured.
+    if not API_KEY:
+        raise HTTPException(503, "API access is not configured. Set KELVID_API_KEY on the server.")
+    supplied = request.headers.get("X-API-Key", "")
+    import hmac
+    if not supplied or not hmac.compare_digest(supplied, API_KEY):
         raise HTTPException(401, "Invalid or missing X-API-Key.")
 
 
@@ -137,12 +144,10 @@ def _save_video_bytes(video_bytes, out_path: Path) -> None:
 app = FastAPI(title="Kelvid API", version=APP_VERSION)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://kelvid-frontend-ten.vercel.app",
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=CORS_ORIGINS,
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "X-API-Key"],
 )
 app.mount("/videos", StaticFiles(directory=str(OUTPUT_DIR)), name="videos")
 
@@ -216,7 +221,8 @@ def list_models():
 
 
 @app.get("/api/gallery")
-def gallery():
+def gallery(request: Request):
+    _check_auth(request)
     items = load_gallery()
     base = FRONTEND_URL.rstrip("/") if FRONTEND_URL else ""
     if base:
@@ -258,6 +264,8 @@ def generate(req: GenerateRequest, request: Request):
         raise HTTPException(503, f"Queue full ({pending}/{MAX_QUEUE}). Try again shortly.")
     model = (req.model or DEFAULT_MODEL).strip()
     provider = (req.provider or HF_PROVIDER).strip()
+    if not any(item["id"] == model and item["provider"] == provider for item in RECOMMENDED_MODELS):
+        raise HTTPException(400, "Unsupported model/provider combination.")
     job_id = uuid.uuid4().hex[:12]
     req_dict = req.model_dump()
     req_dict["model"] = model
@@ -274,7 +282,8 @@ def generate(req: GenerateRequest, request: Request):
 
 
 @app.get("/api/jobs/{job_id}")
-def job_status(job_id: str):
+def job_status(job_id: str, request: Request):
+    _check_auth(request)
     with jobs_lock:
         job = jobs.get(job_id)
     if not job:
@@ -287,7 +296,8 @@ def job_status(job_id: str):
 
 
 @app.get("/api/jobs")
-def all_jobs():
+def all_jobs(request: Request):
+    _check_auth(request)
     with jobs_lock:
         items = sorted(jobs.values(), key=lambda j: j.get("created_at", ""), reverse=True)[:50]
     return {"jobs": items}
